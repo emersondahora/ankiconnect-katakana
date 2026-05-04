@@ -1,0 +1,261 @@
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const gtts = require('google-tts-api');
+const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('ffmpeg-static');
+const csv = require('csv-parser');
+const cliProgress = require('cli-progress');
+
+
+
+ffmpeg.setFfmpegPath(ffmpegPath);
+
+const ANKI = 'http://localhost:8765';
+const DECK = 'Japanese::Vocabulario::Katakana';
+const MODEL = 'JP::Katakana';
+const PEXELS_API_KEY = 'JPHsRUcwv2YdbXJjHzbgwbD4KyMbMEljmGmLPOnGzNmh6phlieYQh0Yu';
+
+const progressBar = new cliProgress.SingleBar({
+    format: '🚀 {bar} {percentage}% | {value}/{total} | ✔ {imported} | ⏭ {skipped} | {status}',
+    barCompleteChar: '█',
+    barIncompleteChar: '░',
+    hideCursor: true
+});
+
+const imported = [];
+const skipped = [];
+
+
+async function loadCSV(filePath) {
+    return new Promise((resolve) => {
+        const results = [];
+
+        fs.createReadStream(filePath)
+            .pipe(csv())
+            .on('data', (data) => {
+                results.push({
+                    word: data.word,
+                    meaning: data.meaning,
+                    sentences: data.sentences.split('|'),
+                    imageTerms: data.image_terms.split('|')
+                });
+            })
+            .on('end', () => resolve(results));
+    });
+}
+
+function getSearchTerms(item) {
+    return item.imageTerms?.length
+        ? item.imageTerms
+        : [item.meaning];
+}
+
+async function fetchBestImage(queries) {
+    for (const query of queries) {
+        const res = await axios.get('https://api.pexels.com/v1/search', {
+            headers: { Authorization: PEXELS_API_KEY },
+            params: { query, per_page: 3 }
+        });
+
+        if (!res.data.photos.length) continue;
+
+        const sorted = res.data.photos.sort((a, b) => {
+            const score = (p) => {
+                const size = p.width * p.height;
+                const landscape = p.width > p.height ? 1.2 : 1;
+                return size * landscape;
+            };
+
+            return score(b) - score(a);
+        });
+
+        return sorted[0].src.medium;
+    }
+
+    return null;
+}
+
+
+// helper anki
+async function anki(action, params = {}, retries = 3) {
+    try {
+        const res = await axios.post(ANKI, {
+            action,
+            version: 6,
+            params
+        });
+        return res.data.result;
+    } catch (err) {
+        if (retries > 0) {
+            //console.log('retry...', action);
+            await sleep(500);
+            return anki(action, params, retries - 1);
+        }
+        throw err;
+    }
+}
+
+// gera áudio base
+async function generateAudio(text, fileName) {
+    const url = gtts.getAudioUrl(text, { lang: 'ja', slow: false });
+    const filePath = path.join('audio', fileName);
+
+    if (!fs.existsSync('audio')) fs.mkdirSync('audio');
+
+    const response = await axios({ url, method: 'GET', responseType: 'stream' });
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
+
+    return new Promise((res) => writer.on('finish', () => res(filePath)));
+}
+
+// cria versão 1.5x
+function speedUp(input, output) {
+    return new Promise((resolve) => {
+        ffmpeg(input)
+            .audioBitrate(64)
+            .audioFilters('atempo=1.5')
+            .save(output)
+            .on('end', resolve);
+    });
+}
+
+// envia mídia
+async function sendMedia(fileName, filePath) {
+    const data = fs.readFileSync(filePath).toString('base64');
+
+    await anki('storeMediaFile', {
+        filename: fileName,
+        data
+    });
+
+    await sleep(300); // 👈 evita matar o Anki
+}
+
+// cria nota
+async function createNote(item) {
+    const fields = {
+        Word: item.word,
+        Meaning: item.meaning,
+        Image: `<img src="${item.image}">`
+    };
+
+    // áudio da palavra
+    const wordFile = `${item.word}.mp3`;
+    const wordPath = await generateAudio(item.word, wordFile);
+    await sendMedia(wordFile, wordPath);
+    fields.AudioWord = `[sound:${wordFile}]`;
+
+    const queries = getSearchTerms(item);
+    const imageUrl = await fetchBestImage(queries);
+
+    fields.Image = imageUrl ? `<img src="${imageUrl}">` : '';
+
+    // frases
+    for (let i = 0; i < item.sentences.length; i++) {
+        const s = item.sentences[i];
+        const base = `${item.word}_s${i}`;
+
+        const normalFile = `${base}.mp3`;
+        const fastFile = `${base}_fast.mp3`;
+
+        const normalPath = await generateAudio(s, normalFile);
+        await speedUp(normalPath, path.join('audio', fastFile));
+
+        await sendMedia(normalFile, normalPath);
+        await sendMedia(fastFile, path.join('audio', fastFile));
+
+        fields[`Sentence${i + 1}`] = s;
+        fields[`AudioSentence${i + 1}_Normal`] = `[sound:${normalFile}]`;
+        fields[`AudioSentence${i + 1}_Fast`] = `[sound:${fastFile}]`;
+    }
+
+    await anki('addNote', {
+        note: {
+            deckName: DECK,
+            modelName: MODEL,
+            fields,
+            tags: ['katakana', 'audio-duplo']
+        }
+    });
+}
+
+function sleep(ms) {
+    return new Promise(r => setTimeout(r, ms));
+}
+
+function saveCSV(filename, data) {
+    const header = 'word,meaning,sentences,image_terms\n';
+
+    const rows = data.map(item => {
+        const sentences = item.sentences.join('|');
+        const terms = item.imageTerms.join('|');
+
+        return `${item.word},${item.meaning},${sentences},${terms}`;
+    });
+
+    fs.writeFileSync(filename, header + rows.join('\n'));
+}
+
+async function getExistingWords() {
+    const notes = await anki('findNotes', {
+        query: `deck:${DECK}`
+    });
+
+    const info = await anki('notesInfo', { notes });
+
+    return new Set(info.map(n => n.fields.Word.value));
+}
+
+// run
+(async () => {
+    await anki('createDeck', { deck: DECK });
+
+    const words = await loadCSV('./words/w1.csv');
+
+    const existingWords = await getExistingWords();
+
+    const total = words.length;
+    progressBar.start(total, 0, {
+        status: 'Iniciando...'
+    });
+
+    let current = 0;
+
+    for (const item of words) {
+
+        progressBar.update(current, {
+            status: `🔍 ${item.word}`
+        });
+
+        if (existingWords.has(item.word)) {
+            skipped.push(item);
+
+            current++;
+            progressBar.update(current, {
+                status: `⏭️ Skip ${item.word}`
+            });
+
+            continue;
+        }
+
+        await createNote(item);
+        imported.push(item);
+
+        current++;
+        progressBar.update(current, {
+            status: `✅ ${item.word}`,
+            imported: imported.length,
+            skipped: skipped.length
+        });
+    }
+
+    saveCSV('imported.csv', imported);
+    saveCSV('skipped.csv', skipped);
+
+    progressBar.stop();
+    console.log(`✅ Importados: ${imported.length}`);
+    console.log(`⏭️ Pulados: ${skipped.length}`);
+    console.log('Finalizado.');
+})();
