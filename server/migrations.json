@@ -1,5 +1,6 @@
 {
   "executed": [
-    "001_add_display_sentences.ts"
+    "001_add_display_sentences.ts",
+    "002_update_highlight_style.ts"
   ]
 }

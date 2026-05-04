@@ -5,6 +5,10 @@ Todas as alterações notáveis neste projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/),
 e este projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [1.1.1] - 2026-05-04
+### Alterado
+- Estilo do destaque (\`.highlight\`) nas palavras modificados para serem mais sutis e combinarem com a caixa de exemplos.
+
 ## [1.1.0] - 2026-05-04
 ### Adicionado
 - Sistema de Migrations para execução de scripts de alteração única.
