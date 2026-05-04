@@ -74,6 +74,7 @@ export class CardCreationService {
                 await AnkiService.storeMediaFile(fastFile, fastPath);
 
                 fields[`Sentence${i + 1}`] = s;
+                fields[`Sentence${i + 1}_Display`] = s.replace(new RegExp(item.word, 'g'), `<span class="highlight">$&</span>`);
                 fields[`AudioSentence${i + 1}_Normal`] = `[sound:${normalFile}]`;
                 fields[`AudioSentence${i + 1}_Fast`] = `[sound:${fastFile}]`;
             }

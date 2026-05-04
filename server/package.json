@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/cli.ts",
-    "dev": "tsx watch src/api.ts"
+    "dev": "tsx watch src/api.ts",
+    "migrate": "tsx src/migrations/runMigrations.ts"
   },
   "dependencies": {
     "axios": "^1.6.0",
