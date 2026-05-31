@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import axios from 'axios'
-import { Maximize2, Minimize2, X, PanelRightClose, Sun, Moon } from 'lucide-vue-next'
+import { AnkiAPI } from '../api/anki'
+import { Maximize2, Minimize2, X, PanelRightClose, Sun, Moon, Edit } from 'lucide-vue-next'
 import { previewMode, togglePreviewMode, closePreviewModal } from '../composables/usePreviewMode'
 
 const props = defineProps<{
   fields: Record<string, string>
   modelName?: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'edit'): void
 }>()
 
 const templates = ref<Record<string, { Front: string, Back: string }>>({})
@@ -34,8 +38,7 @@ watch(activeTemplateName, () => {
 const fetchTemplates = async () => {
   isLoading.value = true
   try {
-    const url = props.modelName ? `http://localhost:3000/api/anki/templates?modelName=${encodeURIComponent(props.modelName)}` : 'http://localhost:3000/api/anki/templates'
-    const res = await axios.get(url)
+    const res = await AnkiAPI.getTemplates(props.modelName)
     templates.value = res.data.templates
     if (Object.keys(templates.value).length > 0) {
       activeTemplateName.value = Object.keys(templates.value)[0]
@@ -105,30 +108,39 @@ const getRenderedHtml = (templateType: 'Front' | 'Back') => {
               :title="activeTemplateName">{{ activeTemplateName }}</span>
       </div>
       <div class="flex items-center space-x-1">
+        <!-- Edit button (sidebar only) — same ghost style as other icons -->
+        <button v-if="previewMode === 'sidebar'"
+                @click="emit('edit')"
+                class="p-1.5 rounded-md transition-colors flex items-center space-x-1"
+                :class="isDarkMode ? 'text-slate-400 hover:bg-slate-700 hover:text-indigo-300' : 'text-slate-500 hover:bg-slate-200 hover:text-indigo-600'"
+                title="Edit Note">
+          <Edit class="w-4 h-4" />
+        </button>
+
         <!-- Dark mode toggle -->
         <button @click="toggleDarkMode" class="p-1.5 rounded-md transition-colors"
-                :class="isDarkMode ? 'hover:bg-slate-700 hover:text-amber-400' : 'hover:bg-slate-200 hover:text-indigo-600'" title="Toggle Dark Mode">
+                :class="isDarkMode ? 'text-slate-400 hover:bg-slate-700 hover:text-amber-400' : 'text-slate-500 hover:bg-slate-200 hover:text-indigo-600'" title="Toggle Dark Mode">
           <Sun v-if="isDarkMode" class="w-4 h-4" />
           <Moon v-else class="w-4 h-4" />
         </button>
         
         <!-- View mode controls -->
         <template v-if="previewMode === 'sidebar'">
-          <button @click="togglePreviewMode" class="p-1.5 rounded-md transition-colors hover:text-indigo-600 hover:bg-slate-200" :class="isDarkMode ? 'hover:bg-slate-700' : ''" title="Fullscreen">
+          <button @click="togglePreviewMode" class="p-1.5 rounded-md transition-colors" :class="isDarkMode ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-slate-500 hover:bg-slate-200 hover:text-indigo-600'" title="Fullscreen">
             <Maximize2 class="w-4 h-4" />
           </button>
         </template>
         <template v-else>
-          <button @click="togglePreviewMode" class="p-1.5 rounded-md transition-colors hover:text-indigo-600 hover:bg-slate-200" :class="isDarkMode ? 'hover:bg-slate-700' : ''" title="Dock to sidebar">
+          <button @click="togglePreviewMode" class="p-1.5 rounded-md transition-colors" :class="isDarkMode ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-slate-500 hover:bg-slate-200 hover:text-indigo-600'" title="Dock to sidebar">
             <PanelRightClose class="w-4 h-4" />
           </button>
-          <button @click="closePreviewModal" class="p-1.5 rounded-md transition-colors hover:text-red-500 hover:bg-slate-200" :class="isDarkMode ? 'hover:bg-slate-700 hover:text-red-400' : ''" title="Close">
+          <button @click="closePreviewModal" class="p-1.5 rounded-md transition-colors" :class="isDarkMode ? 'text-slate-400 hover:bg-slate-700 hover:text-red-400' : 'text-slate-500 hover:bg-slate-200 hover:text-red-500'" title="Close">
             <X class="w-4 h-4" />
           </button>
         </template>
-      </div>
-    </div>
-    
+      </div>  <!-- end buttons -->
+    </div>  <!-- end header bar -->
+
     <div v-if="isLoading" class="flex-1 flex items-center justify-center">
       <div class="animate-spin rounded-full h-8 w-8 border-b-2" :class="isDarkMode ? 'border-indigo-400' : 'border-indigo-600'"></div>
     </div>
@@ -147,42 +159,46 @@ const getRenderedHtml = (templateType: 'Front' | 'Back') => {
         </button>
       </div>
 
-      <div class="flex-1 overflow-y-auto p-6 flex flex-col items-center relative pb-24">
-        <!-- CSS injection -->
-        <component is="style" type="text/css">
-          .anki-preview-container {
-            {{ styling }}
-          }
-          /* Dark mode overrides for common Anki classes */
-          .dark-mode-preview.anki-preview-container {
-            background-color: transparent !important;
-            color: #f1f5f9 !important;
-          }
-          .dark-mode-preview.anki-preview-container .nightMode { /* if template supports native nightMode class */
-            display: block;
-          }
-          .anki-preview-container img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px auto; }
-        </component>
-      
-        <!-- container -->
-        <div class="anki-preview-container w-full flex flex-col items-center justify-center min-h-[200px]"
-             :class="{'dark-mode-preview': isDarkMode, 'nightMode': isDarkMode}">
-          <div v-if="!showBack" class="w-full text-center" v-html="getRenderedHtml('Front')"></div>
-          <div v-else class="w-full text-center" v-html="getRenderedHtml('Back')"></div>
+      <!-- Content: scrolls, button stays pinned at bottom -->
+      <div class="flex-1 flex flex-col min-h-0">
+        <!-- Scrollable card body -->
+        <div class="flex-1 overflow-y-auto p-5">
+          <!-- CSS injection -->
+          <component is="style" type="text/css">
+            .anki-preview-container {
+              {{ styling }}
+            }
+            .dark-mode-preview.anki-preview-container {
+              background-color: transparent !important;
+              color: #f1f5f9 !important;
+            }
+            .dark-mode-preview.anki-preview-container .nightMode {
+              display: block;
+            }
+            .anki-preview-container img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px auto; }
+          </component>
+
+          <div class="anki-preview-container w-full"
+               :class="{'dark-mode-preview': isDarkMode, 'nightMode': isDarkMode}">
+            <div v-if="!showBack" class="w-full text-center" v-html="getRenderedHtml('Front')"></div>
+            <div v-else class="w-full text-center" v-html="getRenderedHtml('Back')"></div>
+          </div>
         </div>
-      </div>
-      
-      <!-- Fixed bottom button -->
-      <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t flex justify-center pt-8 pointer-events-none"
-           :class="isDarkMode ? 'from-slate-900 via-slate-900/90 to-transparent' : 'from-white via-white/90 to-transparent'">
-        <button v-if="!showBack" @click="showBack = true" class="pointer-events-auto px-8 py-3 rounded-xl font-medium shadow-md hover:shadow-lg transition-all w-full max-w-[250px] active:scale-95"
-                :class="isDarkMode ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'">
-          Show Answer
-        </button>
-        <button v-else @click="showBack = false" class="pointer-events-auto px-8 py-3 rounded-xl font-medium shadow-sm transition-all w-full max-w-[250px] active:scale-95"
-                :class="isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'">
-          Show Front
-        </button>
+
+        <!-- Always-visible toggle button pinned at the bottom -->
+        <div class="shrink-0 px-4 py-3 border-t flex justify-center"
+             :class="isDarkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'">
+          <button v-if="!showBack" @click="showBack = true"
+                  class="px-8 py-2.5 rounded-xl font-medium shadow-md hover:shadow-lg transition-all w-full max-w-[260px] active:scale-95"
+                  :class="isDarkMode ? 'bg-indigo-600 hover:bg-indigo-500 text-white' : 'bg-slate-800 hover:bg-slate-700 text-white'">
+            Show Answer
+          </button>
+          <button v-else @click="showBack = false"
+                  class="px-8 py-2.5 rounded-xl font-medium shadow-sm transition-all w-full max-w-[260px] active:scale-95"
+                  :class="isDarkMode ? 'bg-slate-700 hover:bg-slate-600 text-white' : 'bg-slate-200 hover:bg-slate-300 text-slate-800'">
+            Show Front
+          </button>
+        </div>
       </div>
     </div>
   </div>

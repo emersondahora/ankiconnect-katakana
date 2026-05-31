@@ -1,16 +1,21 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
-import axios from 'axios'
-import { Folder, Search, FileText } from 'lucide-vue-next'
+import { AnkiAPI } from '../api/anki'
+import { Folder, Search, FileText, Edit } from 'lucide-vue-next'
 import AnkiPreview from '../components/AnkiPreview.vue'
+import NoteEditor from '../components/NoteEditor.vue'
+import DeckSelector from '../components/DeckSelector.vue'
 import { isAnkiOnline, isBackendOnline } from '../composables/useAnkiStatus'
 import { previewMode, currentPreviewFields, currentPreviewModel, openPreviewModal } from '../composables/usePreviewMode'
+import { useCache } from '../composables/useCache'
 
-const decks = ref<{name: string, count: number, label: string}[]>([])
-const selectedDeck = ref<string>('')
+const selectedDeck = useCache('selected-deck', '')
 const notes = ref<any[]>([])
 const isLoadingNotes = ref(false)
 const searchQuery = ref('')
+
+const isEditorOpen = ref(false)
+const editingNote = ref<any>(null)
 
 const previewWidth = ref(450)
 const isResizing = ref(false)
@@ -28,48 +33,24 @@ onMounted(async () => {
       previewWidth.value = parsed
     }
   }
-
-  if (isBackendOnline.value && isAnkiOnline.value) {
-    await fetchDecks()
+  if (selectedDeck.value && isBackendOnline.value && isAnkiOnline.value) {
+    await fetchNotes()
   }
 })
 
-watch([isBackendOnline, isAnkiOnline], async ([backend, anki]) => {
-  if (backend && anki && decks.value.length === 0) {
-    await fetchDecks()
+watch(selectedDeck, async (newVal) => {
+  if (newVal) {
+    await fetchNotes()
+  } else {
+    notes.value = []
   }
 })
-
-const fetchDecks = async () => {
-  try {
-    const res = await axios.get('http://localhost:3000/api/anki/decks')
-    // Format hierarchical labels
-    decks.value = res.data.map((d: any) => {
-      const parts = d.name.split('::')
-      const depth = parts.length - 1
-      const indent = '\u00A0\u00A0\u00A0\u00A0'.repeat(depth)
-      const leafName = parts[depth]
-      return {
-        name: d.name,
-        count: d.count,
-        label: `${indent}${leafName} (${d.count})`
-      }
-    })
-    
-    if (decks.value.length > 0) {
-      selectedDeck.value = decks.value[0].name
-      await fetchNotes()
-    }
-  } catch (e) {
-    console.error('Failed to fetch decks', e)
-  }
-}
 
 const fetchNotes = async () => {
   if (!selectedDeck.value) return
   isLoadingNotes.value = true
   try {
-    const res = await axios.get(`http://localhost:3000/api/anki/notes?deck=${encodeURIComponent(selectedDeck.value)}`)
+    const res = await AnkiAPI.getNotes(selectedDeck.value)
     notes.value = res.data
   } catch (e) {
     console.error('Failed to fetch notes', e)
@@ -88,6 +69,23 @@ const filteredNotes = computed(() => {
 
 const handleNoteClick = (note: any) => {
   openPreviewModal(note.fields, note.modelName)
+}
+
+const openEditor = (note: any) => {
+  editingNote.value = note
+  isEditorOpen.value = true
+}
+
+const handleNoteSaved = (updatedFields: Record<string, string>) => {
+  // Update local state for immediate feedback
+  if (editingNote.value) {
+    editingNote.value.fields = updatedFields
+    // Refresh preview if it's currently selected
+    if (currentPreviewFields.value === editingNote.value.fields || 
+        (currentPreviewFields.value && currentPreviewFields.value.Word === updatedFields.Word)) {
+      openPreviewModal(updatedFields, editingNote.value.modelName)
+    }
+  }
 }
 
 const startResize = (e: MouseEvent) => {
@@ -120,21 +118,32 @@ const stopResize = () => {
   <div class="flex h-full p-6">
     <!-- Left Column: Browser -->
     <div class="flex-1 flex flex-col space-y-4 overflow-hidden">
-      <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-sm flex items-center space-x-4 shrink-0">
+      <div class="bg-slate-800 rounded-xl px-4 py-3 border border-slate-700 shadow-sm flex items-center gap-3 shrink-0 min-w-0">
         <Folder class="w-5 h-5 text-indigo-400 shrink-0" />
-        <select v-model="selectedDeck" @change="fetchNotes" class="bg-slate-900 border border-slate-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2.5 font-mono">
-          <option v-for="deck in decks" :key="deck.name" :value="deck.name">{{ deck.label }}</option>
-        </select>
-        
-        <div class="relative w-full max-w-xs shrink-0">
+        <!-- Deck selector: fixed width, shrinks if needed -->
+        <div class="min-w-0" style="flex: 0 0 min(24rem, 50%)">
+          <DeckSelector v-model="selectedDeck" :allowCreate="false" placeholder="Select a deck to view..." />
+        </div>
+        <!-- Search: takes remaining space -->
+        <div class="relative flex-1 min-w-0">
           <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
             <Search class="w-4 h-4 text-slate-400" />
           </div>
-          <input v-model="searchQuery" type="text" class="bg-slate-900 border border-slate-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 p-2.5" placeholder="Search notes...">
+          <input v-model="searchQuery" type="text"
+                 class="bg-slate-900 border border-slate-700 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-2.5"
+                 placeholder="Search notes...">
         </div>
       </div>
       
-      <div class="flex-1 bg-slate-800 rounded-xl border border-slate-700 shadow-sm overflow-hidden flex flex-col">
+      <!-- No Deck Selected State -->
+      <div v-if="!selectedDeck" class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-slate-800/50 rounded-xl border border-dashed border-slate-700 shadow-sm">
+        <Folder class="w-16 h-16 text-indigo-500/30 mb-4" />
+        <h3 class="text-xl font-medium text-slate-300 mb-2">No deck selected</h3>
+        <p class="text-slate-500 max-w-md">Please select a deck from the dropdown above to view and edit its notes.</p>
+      </div>
+      
+      <!-- Notes List -->
+      <div v-else class="flex-1 bg-slate-800 rounded-xl border border-slate-700 shadow-sm overflow-hidden flex flex-col">
         <div class="p-3 bg-slate-800/50 border-b border-slate-700 text-xs font-semibold text-slate-400 uppercase tracking-wider flex justify-between">
           <span>{{ filteredNotes.length }} Notes</span>
         </div>
@@ -154,6 +163,9 @@ const stopResize = () => {
             </div>
             
             <div class="flex items-center space-x-2 shrink-0">
+              <button @click.stop="openEditor(note)" class="p-1.5 text-slate-500 hover:text-indigo-400 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 rounded">
+                <Edit class="w-4 h-4" />
+              </button>
               <span v-if="note.status" class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase"
                     :class="{
                       'bg-blue-500/20 text-blue-300': note.status === 'New',
@@ -181,9 +193,13 @@ const stopResize = () => {
     </div>
     
     <!-- Right Column: Sidebar Preview -->
-    <div v-if="previewMode === 'sidebar'" class="hidden lg:block shrink-0" :style="{ width: previewWidth + 'px', transition: isResizing ? 'none' : 'width 0.1s' }">
+    <div v-if="previewMode === 'sidebar'" class="hidden lg:flex shrink-0 flex-col" :style="{ width: previewWidth + 'px', transition: isResizing ? 'none' : 'width 0.1s' }">
       <div v-if="currentPreviewFields" class="h-full">
-        <AnkiPreview :fields="currentPreviewFields" :modelName="currentPreviewModel" />
+        <AnkiPreview
+          :fields="currentPreviewFields"
+          :modelName="currentPreviewModel"
+          @edit="openEditor(notes.find(n => n.fields === currentPreviewFields) || { fields: currentPreviewFields, modelName: currentPreviewModel })"
+        />
       </div>
       <div v-else class="h-full border-2 border-dashed border-slate-700 rounded-xl flex flex-col items-center justify-center text-slate-500 p-8 text-center bg-slate-800/20">
         <div class="w-16 h-16 rounded-xl bg-slate-800 flex items-center justify-center mb-4">
@@ -193,5 +209,12 @@ const stopResize = () => {
         <p>Click on any note to view its native Anki preview.</p>
       </div>
     </div>
+    
+    <NoteEditor 
+      :isOpen="isEditorOpen" 
+      :note="editingNote" 
+      @close="isEditorOpen = false" 
+      @saved="handleNoteSaved" 
+    />
   </div>
 </template>

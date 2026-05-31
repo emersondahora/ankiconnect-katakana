@@ -9,12 +9,16 @@ import { loadCSV } from './utils/csv.js';
 
 import { ImageService } from './services/ImageService.js';
 import { pLimit } from './utils/pLimit.js';
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const upload = multer({ dest: 'uploads/' });
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Global event emitter for SSE
 export const progressEmitter = new EventEmitter();
@@ -24,7 +28,7 @@ let isProcessing = false;
 
 app.get('/api/status', async (req, res) => {
     try {
-        await AnkiService.createDeck(); 
+        await AnkiService.createDeck(config.ANKI_DECK); 
         res.json({ ankiOnline: true, deck: config.ANKI_DECK });
     } catch (e) {
         res.json({ ankiOnline: false });
@@ -68,23 +72,27 @@ app.get('/api/media/:filename', async (req, res) => {
 
 app.get('/api/anki/decks', async (req, res) => {
     try {
-        const deckNames = await AnkiService.invoke('deckNames');
-        const decksWithCounts = [];
-        
-        for (const name of deckNames) {
-            try {
-                const stat = await AnkiService.invoke('getDeckStats', { decks: [name] });
-                const deckObj = Object.values(stat)[0] as any;
-                decksWithCounts.push({ name, count: deckObj ? deckObj.total_in_deck : 0 });
-            } catch (e) {
-                decksWithCounts.push({ name, count: 0 });
-            }
-        }
-        res.json(decksWithCounts);
+        const deckNames: string[] = (await AnkiService.invoke('deckNames')).sort();
+
+        // Single HTTP round-trip: batch all findNotes queries via AnkiConnect's `multi` action
+        const results = await AnkiService.invokeMulti(
+            deckNames.map(name => ({
+                action: 'findNotes',
+                params: { query: `deck:"${name}"` }
+            }))
+        );
+
+        const counts = deckNames.map((name, i) => ({
+            name,
+            count: Array.isArray(results[i]) ? (results[i] as number[]).length : 0
+        }));
+
+        res.json(counts);
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
 });
+
 
 app.get('/api/anki/notes', async (req, res) => {
     try {
@@ -191,8 +199,9 @@ app.get('/api/images/search', async (req, res) => {
     try {
         const query = req.query.q as string;
         const limit = parseInt(req.query.limit as string) || 10;
+        const source = (req.query.source as string) || 'pexels';
         if (!query) return res.status(400).json({ error: 'Query parameter q is required' });
-        const images = await ImageService.searchImages(query, limit);
+        const images = await ImageService.searchImages(query, limit, source);
         res.json(images);
     } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -212,6 +221,69 @@ app.post('/api/decisions/:noteId', upload.single('file'), (req, res) => {
     res.json({ success: true });
 });
 
+app.post('/api/anki/media', upload.single('file'), async (req, res) => {
+    try {
+        let filePath = '';
+        let fileName = '';
+        let mediaTag = '';
+
+        if (req.file) {
+            filePath = req.file.path;
+            fileName = `media_${Date.now()}_${req.file.originalname}`;
+        } else if (req.body.url) {
+            const url = req.body.url;
+            const ext = url.split('.').pop()?.split('?')[0] || 'jpg'; // Basic guess
+            fileName = `media_${Date.now()}_downloaded.${ext}`;
+            filePath = path.join(process.cwd(), 'uploads', fileName);
+            
+            const response = await axios({ url, responseType: 'stream' });
+            await new Promise((resolve, reject) => {
+                response.data.pipe(fs.createWriteStream(filePath))
+                    .on('finish', resolve)
+                    .on('error', reject);
+            });
+        } else {
+            return res.status(400).json({ error: 'No file or url provided' });
+        }
+
+        await AnkiService.storeMediaFile(fileName, filePath);
+        
+        // Clean up
+        fs.unlink(filePath, () => {});
+
+        // Determine tag based on extension
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        if (['mp3', 'wav', 'ogg'].includes(ext || '')) {
+            mediaTag = `[sound:${fileName}]`;
+        } else {
+            mediaTag = `<img src="${fileName}">`;
+        }
+
+        res.json({ fileName, mediaTag });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.put('/api/anki/notes/:noteId', async (req, res) => {
+    try {
+        const noteId = parseInt(req.params.noteId);
+        const { fields } = req.body; // e.g. { Image: '<img src="...">', Word: '...' }
+
+        // AnkiConnect updateNoteFields requires { note: { id: 123, fields: { ... } } }
+        await AnkiService.invoke('updateNoteFields', {
+            note: {
+                id: noteId,
+                fields
+            }
+        });
+
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
@@ -222,11 +294,12 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     try {
         const words = await loadCSV(req.file.path);
+        const deck = req.body.deck || config.ANKI_DECK;
         
         isProcessing = true;
         res.json({ success: true, total: words.length });
 
-        processBatch(words).finally(() => {
+        processBatch(words, deck).finally(() => {
             isProcessing = false;
         });
 
@@ -235,10 +308,10 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-async function processBatch(words: any[]) {
+async function processBatch(words: any[], deck: string) {
     try {
-        await AnkiService.createDeck();
-        const existingWordsMap = await AnkiService.getExistingWordsMap();
+        await AnkiService.createDeck(deck);
+        const existingWordsMap = await AnkiService.getExistingWordsMap(deck);
         
         const total = words.length;
         let completed = 0;
@@ -264,7 +337,7 @@ async function processBatch(words: any[]) {
                 // generate a unique noteId for this processing item
                 const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
                 
-                const fields = await CardCreationService.process(item, noteId);
+                const fields = await CardCreationService.process(item, noteId, deck);
                 completed++;
                 progressEmitter.emit('progress', { 
                     current: completed, total, word: item.word, status: 'success', fields 

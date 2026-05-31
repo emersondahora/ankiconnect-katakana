@@ -8,7 +8,7 @@ import { CardCreationError } from '../errors/CustomErrors.js';
 import { progressEmitter, decisionEmitter } from '../api.js';
 
 export class CardCreationService {
-    static async process(item: WordItem, noteId: string): Promise<Record<string, string>> {
+    static async process(item: WordItem, noteId: string, deckName: string): Promise<Record<string, string>> {
         try {
             const fields: Record<string, string> = {
                 Word: item.word,
@@ -81,7 +81,7 @@ export class CardCreationService {
 
             // Create Note
             await AnkiService.addNote({
-                deckName: config.ANKI_DECK,
+                deckName: deckName,
                 modelName: config.ANKI_MODEL,
                 fields,
                 tags: ['katakana', 'audio-duplo']

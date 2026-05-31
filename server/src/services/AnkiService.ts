@@ -30,6 +30,24 @@ export class AnkiService {
         });
     }
 
+    /**
+     * Batch multiple actions in a single HTTP call using AnkiConnect's `multi` action.
+     * Returns an array of results in the same order as the input actions.
+     */
+    static async invokeMulti(actions: { action: string; params?: Record<string, any> }[]): Promise<any[]> {
+        const results = await this.invoke('multi', {
+            actions: actions.map(a => ({ action: a.action, version: 6, params: a.params ?? {} }))
+        });
+        // Each entry is either { result, error } or a raw result depending on AnkiConnect version
+        return (results as any[]).map((r: any) => {
+            if (r && typeof r === 'object' && 'error' in r && 'result' in r) {
+                if (r.error) throw new Error(r.error);
+                return r.result;
+            }
+            return r; // older AnkiConnect returns raw results
+        });
+    }
+
     static async storeMediaFile(fileName: string, filePath: string): Promise<void> {
         const data = fs.readFileSync(filePath).toString('base64');
         await this.invoke('storeMediaFile', {
@@ -43,9 +61,9 @@ export class AnkiService {
         await this.invoke('addNote', { note });
     }
 
-    static async getExistingWordsMap(): Promise<Map<string, Record<string, string>>> {
+    static async getExistingWordsMap(deck: string): Promise<Map<string, Record<string, string>>> {
         const notes = await this.invoke('findNotes', {
-            query: `deck:"${config.ANKI_DECK}"`
+            query: `deck:"${deck}"`
         });
 
         let info: any[] = [];
@@ -69,7 +87,7 @@ export class AnkiService {
         return map;
     }
 
-    static async createDeck(): Promise<void> {
-        await this.invoke('createDeck', { deck: config.ANKI_DECK });
+    static async createDeck(deck: string): Promise<void> {
+        await this.invoke('createDeck', { deck });
     }
 }

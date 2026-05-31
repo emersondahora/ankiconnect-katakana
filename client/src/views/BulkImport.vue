@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, onUnmounted, onMounted, computed } from 'vue'
-import axios from 'axios'
+import { ref, onUnmounted, onMounted, computed, watch } from 'vue'
+import { ImportAPI } from '../api/import'
+import { ImagesAPI } from '../api/images'
 import { UploadCloud, FileType, CheckCircle, XCircle, AlertCircle, RefreshCw, Clock, Bell } from 'lucide-vue-next'
 import AnkiPreview from '../components/AnkiPreview.vue'
 import DecisionModal from '../components/DecisionModal.vue'
+import DeckSelector from '../components/DeckSelector.vue'
 import { isAnkiOnline, isBackendOnline } from '../composables/useAnkiStatus'
 import { previewMode, currentPreviewFields, openPreviewModal } from '../composables/usePreviewMode'
+import { useCache } from '../composables/useCache'
 
 const fileInput = ref<HTMLInputElement | null>(null)
 const selectedFile = ref<File | null>(null)
@@ -24,24 +27,24 @@ const pendingDecisions = ref<any[]>([])
 const isAutoDecisionEnabled = ref(false)
 const isModalHidden = ref(false)
 
+const selectedDeck = useCache('selected-deck', '')
+
 const activeDecision = computed(() => pendingDecisions.value.length > 0 ? pendingDecisions.value[0] : null)
 const isDecisionModalOpen = computed(() => !isModalHidden.value && pendingDecisions.value.length > 0)
 
 const autoResolveDecision = async (decision: any) => {
   try {
-    const res = await axios.get(`http://localhost:3000/api/images/search`, {
-      params: { q: decision.searchTerms[0], limit: 3 }
-    })
+    const res = await ImagesAPI.search(decision.searchTerms[0], 3)
     const images = res.data
     const bestUrl = images.length > 0 ? images[0].original : ''
     
-    await axios.post(`http://localhost:3000/api/decisions/${decision.noteId}`, {
+    await ImportAPI.submitDecisionJSON(decision.noteId, {
       type: 'URL',
       url: bestUrl
     })
   } catch (err) {
     console.error('Auto resolve failed', err)
-    await axios.post(`http://localhost:3000/api/decisions/${decision.noteId}`, { type: 'URL', url: '' })
+    await ImportAPI.submitDecisionJSON(decision.noteId, { type: 'URL', url: '' })
   }
 }
 
@@ -62,18 +65,8 @@ const onDecisionSubmit = (payload: { auto: boolean }) => {
   // We can just leave the 'pending' log, the 'success' log will appear on top.
 }
 
-const previewWidth = ref(450)
+const previewWidth = useCache('anki-preview-width', 450)
 const isResizing = ref(false)
-
-onMounted(() => {
-  const savedWidth = localStorage.getItem('anki-preview-width')
-  if (savedWidth) {
-    const parsed = parseInt(savedWidth, 10)
-    if (!isNaN(parsed) && parsed >= 300 && parsed <= 1200) {
-      previewWidth.value = parsed
-    }
-  }
-})
 
 const startResize = (e: MouseEvent) => {
   isResizing.value = true
@@ -97,7 +90,6 @@ const stopResize = () => {
   document.body.style.userSelect = ''
   window.removeEventListener('mousemove', handleResize)
   window.removeEventListener('mouseup', stopResize)
-  localStorage.setItem('anki-preview-width', previewWidth.value.toString())
 }
 
 let eventSource: EventSource | null = null
@@ -179,6 +171,7 @@ const startUpload = async () => {
   isUploading.value = true
   const formData = new FormData()
   formData.append('file', selectedFile.value)
+  formData.append('deck', selectedDeck.value)
   
   try {
     startSSE()
@@ -186,9 +179,7 @@ const startUpload = async () => {
     logs.value = []
     progress.value = { current: 0, total: 0, percentage: 0 }
     
-    await axios.post('http://localhost:3000/api/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    await ImportAPI.uploadCSV(formData)
     
   } catch (error) {
     console.error('Upload failed', error)
@@ -221,6 +212,11 @@ onUnmounted(() => {
       <div v-if="importState === 'idle'" 
            class="border-2 border-dashed border-slate-600 rounded-xl bg-slate-800/50 flex flex-col items-center justify-center p-12 transition-colors hover:bg-slate-800 h-full"
            @dragover.prevent @drop.prevent="handleFileDrop">
+           
+        <div class="mb-10 w-full max-w-md text-left z-10">
+          <label class="block text-sm font-medium text-slate-300 mb-2">Target Deck</label>
+          <DeckSelector v-model="selectedDeck" />
+        </div>
         
         <div v-if="!selectedFile" class="text-center">
           <UploadCloud class="w-16 h-16 text-indigo-400 mx-auto mb-4" />
@@ -240,6 +236,7 @@ onUnmounted(() => {
               <p class="text-slate-400 text-sm">{{ (selectedFile.size / 1024).toFixed(2) }} KB</p>
             </div>
           </div>
+
           <div class="flex space-x-4 justify-center">
             <button @click="selectedFile = null" class="px-4 py-2 text-slate-300 hover:text-white transition-colors">
               Cancel
