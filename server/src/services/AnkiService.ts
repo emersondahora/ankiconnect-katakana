@@ -57,8 +57,18 @@ export class AnkiService {
         await sleep(300); // Prevents killing Anki
     }
 
-    static async addNote(note: any): Promise<void> {
-        await this.invoke('addNote', { note });
+    static async addNote(note: any): Promise<number> {
+        return await this.invoke('addNote', { note });
+    }
+
+    static async changeDeck(noteId: number, deckName: string): Promise<void> {
+        const info = await this.invoke('notesInfo', { notes: [noteId] });
+        if (info && info.length > 0) {
+            const cardIds = info[0].cards;
+            if (cardIds && cardIds.length > 0) {
+                await this.invoke('changeDeck', { cards: cardIds, deck: deckName });
+            }
+        }
     }
 
     static async updateNoteFields(noteId: number, fields: Record<string, string>): Promise<void> {

@@ -101,13 +101,17 @@ export class VocabularyCardService extends BaseCardService {
 
             if (isUpdate && ankiNoteId) {
                 await AnkiService.updateNoteFields(ankiNoteId, fields);
+                await AnkiService.changeDeck(ankiNoteId, deckName);
             } else {
-                await AnkiService.addNote({
+                const newNoteId = await AnkiService.addNote({
                     deckName: deckName,
                     modelName: this.getModelName(),
                     fields,
                     tags: ['vocabulary', 'import-auto']
                 });
+                if (newNoteId) {
+                    await AnkiService.changeDeck(newNoteId, deckName);
+                }
             }
 
             return fields;

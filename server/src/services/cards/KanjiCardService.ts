@@ -32,9 +32,10 @@ export class KanjiCardService extends BaseCardService {
                 const url = `https://raw.githubusercontent.com/KanjiVG/kanjivg/master/kanji/${hex}.svg`;
                 const svgResp = await axios.get(url);
                 
-                // Extrair apenas o conteúdo interno (groups e paths) para limpar o XML namespace que pode quebrar no Anki
+                // Extrair apenas a tag <svg> e seu conteúdo, ignorando declarações XML, comentários e DTD
                 const svgContent = svgResp.data;
-                strokeSvg = svgContent; 
+                const match = svgContent.match(/<svg[\s\S]*<\/svg>/i);
+                strokeSvg = match ? match[0] : svgContent; 
             } catch (err: any) {
                 console.warn(`Failed to fetch SVG for kanji ${kanji}: ${err.message}`);
             }
@@ -51,13 +52,17 @@ export class KanjiCardService extends BaseCardService {
 
             if (isUpdate && ankiNoteId) {
                 await AnkiService.updateNoteFields(ankiNoteId, fields);
+                await AnkiService.changeDeck(ankiNoteId, deckName);
             } else {
-                await AnkiService.addNote({
+                const newNoteId = await AnkiService.addNote({
                     deckName: deckName,
                     modelName: this.getModelName(),
                     fields,
                     tags: ['kanji', 'import-auto']
                 });
+                if (newNoteId) {
+                    await AnkiService.changeDeck(newNoteId, deckName);
+                }
             }
 
             return fields;

@@ -164,6 +164,10 @@ const startSSE = () => {
 
 const startUpload = async () => {
   if (!selectedFile.value) return
+  if (!selectedDeck.value) {
+    alert("Please select a target deck first.");
+    return;
+  }
   if (!isBackendOnline.value || !isAnkiOnline.value) {
     alert("Cannot start import: The API or Anki is offline.");
     return;

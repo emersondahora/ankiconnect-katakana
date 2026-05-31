@@ -20,10 +20,10 @@ export function togglePreviewMode() {
   }
 }
 
-export function openPreviewModal(fields: Record<string, string>, modelName: string = '') {
+export function openPreviewModal(fields: Record<string, string>, modelName: string = '', forceModal: boolean = false) {
   currentPreviewFields.value = fields
   currentPreviewModel.value = modelName
-  if (previewMode.value === 'modal') {
+  if (previewMode.value === 'modal' || forceModal) {
     isModalOpen.value = true
   }
 }

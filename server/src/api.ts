@@ -6,6 +6,7 @@ import { config } from './config/env.js';
 import { AnkiService } from './services/AnkiService.js';
 import { CardCreationService } from './services/CardCreationService.js';
 import { loadCSV } from './utils/csv.js';
+import { AIGenerationService } from './services/AIGenerationService.js';
 
 import { ImageService } from './services/ImageService.js';
 import { pLimit } from './utils/pLimit.js';
@@ -32,6 +33,21 @@ app.get('/api/status', async (req, res) => {
         res.json({ ankiOnline: true, deck: config.ANKI_DECK });
     } catch (e) {
         res.json({ ankiOnline: false });
+    }
+});
+
+app.post('/api/generate', async (req, res) => {
+    try {
+        const { type, item, context, maxCount } = req.body;
+        if (!type || !item) {
+            return res.status(400).json({ error: 'type and item are required' });
+        }
+
+        const count = parseInt(maxCount, 10) || 5;
+        const result = await AIGenerationService.generate(type, item, context, count);
+        res.json({ success: true, result });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
     }
 });
 
@@ -294,8 +310,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
     try {
         const words = await loadCSV(req.file.path);
-        const deck = req.body.deck || config.ANKI_DECK;
-        const modelName = req.body.modelName || config.ANKI_MODEL;
+        const deck = req.body.deck;
+        const modelName = req.body.modelName;
         
         isProcessing = true;
         res.json({ success: true, total: words.length });
@@ -311,8 +327,8 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
 
 app.post('/api/upload/manual', upload.single('file'), async (req, res) => {
     try {
-        const deck = req.body.deck || config.ANKI_DECK;
-        const modelName = req.body.modelName || config.ANKI_MODEL;
+        const deck = req.body.deck;
+        const modelName = req.body.modelName;
         
         const item = { ...req.body };
         if (req.file) {
