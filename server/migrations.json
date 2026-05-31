@@ -2,6 +2,7 @@
   "executed": [
     "001_add_display_sentences.ts",
     "002_update_highlight_style.ts",
-    "003_create_kanji_model.ts"
+    "003_create_kanji_model.ts",
+    "004_create_vocabulary_model.ts"
   ]
 }
