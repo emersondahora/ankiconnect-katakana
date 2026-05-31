@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { AnkiAPI } from '../api/anki'
 import { Maximize2, Minimize2, X, PanelRightClose, Sun, Moon, Edit } from 'lucide-vue-next'
 import { previewMode, togglePreviewMode, closePreviewModal } from '../composables/usePreviewMode'
@@ -63,9 +63,9 @@ const processAudioTags = (html: string) => {
   // Replace [sound:file.mp3]
   let processed = html.replace(/\[sound:(.*?)\]/g, (match, filename) => {
     return `
-      <div class="inline-flex items-center space-x-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-full cursor-pointer transition-colors border border-indigo-200 shadow-sm mx-1 my-1" onclick="new Audio('http://localhost:3000/api/media/${filename}').play()">
+      <div class="audio-btn" onclick="new Audio('http://localhost:3000/api/media/' + encodeURIComponent('${filename}')).play()">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
-        <span class="text-sm font-medium">Play Audio</span>
+        <span>Play Audio</span>
       </div>
     `
   })
@@ -79,21 +79,98 @@ const processAudioTags = (html: string) => {
   return processed
 }
 
-const getRenderedHtml = (templateType: 'Front' | 'Back') => {
+const renderAnkiTemplate = (html: string, fields: Record<string, string>) => {
+  let result = html
+
+  // 1. Condicionais: {{#Field}}...{{/Field}} e {{^Field}}...{{/Field}}
+  for (const [key, value] of Object.entries(fields)) {
+    const isTruthy = value && value.trim() !== ''
+    
+    // Regex para {{#Field}}...{{/Field}}
+    const posRegex = new RegExp(`{{#${key}}}([\\s\\S]*?){{/${key}}}`, 'g')
+    result = result.replace(posRegex, isTruthy ? '$1' : '')
+
+    // Regex para {{^Field}}...{{/Field}}
+    const negRegex = new RegExp(`{{\\^${key}}}([\\s\\S]*?){{/${key}}}`, 'g')
+    result = result.replace(negRegex, !isTruthy ? '$1' : '')
+  }
+
+  // 2. Filtros e Substituição Básica
+  for (const [key, value] of Object.entries(fields)) {
+    // Process Furigana (Kanji[kana])
+    const furiganaRegex = new RegExp(`{{furigana:${key}}}`, 'g')
+    result = result.replace(furiganaRegex, () => {
+      if (!value) return ''
+      return value.replace(/ ?([^\s\[]+)\[([^\]]+)\]/g, '<ruby>$1<rt>$2</rt></ruby>')
+    })
+
+    const kanjiRegex = new RegExp(`{{kanji:${key}}}`, 'g')
+    result = result.replace(kanjiRegex, () => {
+      if (!value) return ''
+      return value.replace(/ ?([^\s\[]+)\[([^\]]+)\]/g, '$1')
+    })
+
+    const kanaRegex = new RegExp(`{{kana:${key}}}`, 'g')
+    result = result.replace(kanaRegex, () => {
+      if (!value) return ''
+      return value.replace(/ ?([^\s\[]+)\[([^\]]+)\]/g, '$2')
+    })
+
+    // Substituição normal {{Field}}
+    const normalRegex = new RegExp(`{{${key}}}`, 'g')
+    result = result.replace(normalRegex, value)
+  }
+
+  // Remove any unmatched tags
+  result = result.replace(/{{[^}]+}}/g, '')
+
+  return result
+}
+
+const iframeHtml = computed(() => {
   if (!templates.value || !activeTemplateName.value) return ''
   const activeTemplate = templates.value[activeTemplateName.value]
   if (!activeTemplate) return ''
   
-  let html = activeTemplate[templateType] || ''
+  let html = activeTemplate[showBack.value ? 'Back' : 'Front'] || ''
+  html = renderAnkiTemplate(html, props.fields)
+  html = processAudioTags(html)
   
-  // Replace {{Field}} with actual field data
-  for (const [key, value] of Object.entries(props.fields)) {
-    const regex = new RegExp(`{{${key}}}`, 'g')
-    html = html.replace(regex, value)
-  }
-  
-  return processAudioTags(html)
-}
+  return `
+    <!DOCTYPE html>
+    <html class="${isDarkMode.value ? 'nightMode' : ''}">
+    <head>
+      <meta charset="utf-8">
+      <base href="http://localhost:3000/api/media/">
+      <style>
+        body { 
+          margin: 0; 
+          padding: 20px; 
+          background-color: transparent !important;
+          color: ${isDarkMode.value ? '#f1f5f9' : '#1e293b'} !important;
+          font-family: system-ui, -apple-system, sans-serif;
+        }
+        img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px auto; }
+        .audio-btn {
+          display: inline-flex; align-items: center; gap: 0.5rem;
+          background-color: #eef2ff; color: #4f46e5;
+          padding: 0.375rem 0.75rem; border-radius: 9999px;
+          cursor: pointer; border: 1px solid #e0e7ff;
+          font-family: system-ui; font-size: 0.875rem; font-weight: 500;
+          margin: 4px;
+        }
+        .nightMode .audio-btn {
+          background-color: #312e81; color: #a5b4fc; border-color: #3730a3;
+        }
+        ${styling.value}
+      </style>
+    </head>
+    <body class="card ${isDarkMode.value ? 'nightMode' : ''}">
+      ${html}
+    </body>
+    </html>
+  `
+})
 </script>
 
 <template>
@@ -162,27 +239,12 @@ const getRenderedHtml = (templateType: 'Front' | 'Back') => {
       <!-- Content: scrolls, button stays pinned at bottom -->
       <div class="flex-1 flex flex-col min-h-0">
         <!-- Scrollable card body -->
-        <div class="flex-1 overflow-y-auto p-5">
-          <!-- CSS injection -->
-          <component is="style" type="text/css">
-            .anki-preview-container {
-              {{ styling }}
-            }
-            .dark-mode-preview.anki-preview-container {
-              background-color: transparent !important;
-              color: #f1f5f9 !important;
-            }
-            .dark-mode-preview.anki-preview-container .nightMode {
-              display: block;
-            }
-            .anki-preview-container img { max-width: 100%; height: auto; border-radius: 8px; margin: 8px auto; }
-          </component>
-
-          <div class="anki-preview-container w-full"
-               :class="{'dark-mode-preview': isDarkMode, 'nightMode': isDarkMode}">
-            <div v-if="!showBack" class="w-full text-center" v-html="getRenderedHtml('Front')"></div>
-            <div v-else class="w-full text-center" v-html="getRenderedHtml('Back')"></div>
-          </div>
+        <div class="flex-1 p-0 relative">
+          <iframe 
+            class="w-full h-full border-0 absolute inset-0"
+            :srcdoc="iframeHtml"
+            sandbox="allow-scripts allow-same-origin"
+          ></iframe>
         </div>
 
         <!-- Always-visible toggle button pinned at the bottom -->

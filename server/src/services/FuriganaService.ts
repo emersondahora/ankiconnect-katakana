@@ -39,7 +39,22 @@ export class FuriganaService {
             });
 
             // Converte as tags ruby pro formato de leitura do Anki (Kanji[furigana])
-            const ankiFormat = rubyHtml.replace(/<ruby>(.*?)<rp>\(<\/rp><rt>(.*?)<\/rt><rp>\)<\/rp><\/ruby>/g, "$1[$2]");
+            let ankiFormat = rubyHtml.replace(/<ruby>(.*?)<rp>\(<\/rp><rt>(.*?)<\/rt><rp>\)<\/rp><\/ruby>/g, "$1[$2]");
+
+            // Correções de leituras comuns onde o Kuromoji/Kuroshiro erra o contexto
+            const corrections: Record<string, string> = {
+                "何\\[なに\\]ですか": "何[なん]ですか",
+                "何\\[なに\\]の": "何[なん]の",
+                "何\\[なに\\]で": "何[なん]で",
+                "何\\[なに\\]と": "何[なん]と",
+                "何\\[なに\\]だ": "何[なん]だ",
+                "何\\[なに\\]でも": "何[なん]でも",
+                // Pode adicionar mais exceções aqui conforme necessário
+            };
+
+            for (const [wrong, right] of Object.entries(corrections)) {
+                ankiFormat = ankiFormat.replace(new RegExp(wrong, 'g'), right);
+            }
 
             return ankiFormat;
         } catch (error: any) {
