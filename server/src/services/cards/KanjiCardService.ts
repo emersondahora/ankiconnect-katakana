@@ -9,7 +9,7 @@ export class KanjiCardService extends BaseCardService {
         return 'JP::Kanji';
     }
 
-    async process(data: Record<string, string>, noteId: string, deckName: string): Promise<Record<string, string>> {
+    async process(data: Record<string, string>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
         try {
             const kanji = data.Kanji || data.kanji || '';
             const meaning = data.Meaning || data.meaning || '';
@@ -35,9 +35,6 @@ export class KanjiCardService extends BaseCardService {
                 // Extrair apenas o conteúdo interno (groups e paths) para limpar o XML namespace que pode quebrar no Anki
                 const svgContent = svgResp.data;
                 strokeSvg = svgContent; 
-                // Se precisar limpar o <svg> externo: 
-                // const match = svgContent.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
-                // if (match) strokeSvg = match[1];
             } catch (err: any) {
                 console.warn(`Failed to fetch SVG for kanji ${kanji}: ${err.message}`);
             }
@@ -52,12 +49,16 @@ export class KanjiCardService extends BaseCardService {
                 SentencesJson: JSON.stringify(sentencesList)
             };
 
-            await AnkiService.addNote({
-                deckName: deckName,
-                modelName: this.getModelName(),
-                fields,
-                tags: ['kanji', 'import-auto']
-            });
+            if (isUpdate && ankiNoteId) {
+                await AnkiService.updateNoteFields(ankiNoteId, fields);
+            } else {
+                await AnkiService.addNote({
+                    deckName: deckName,
+                    modelName: this.getModelName(),
+                    fields,
+                    tags: ['kanji', 'import-auto']
+                });
+            }
 
             return fields;
         } catch (error: any) {

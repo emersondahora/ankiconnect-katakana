@@ -61,7 +61,16 @@ export class AnkiService {
         await this.invoke('addNote', { note });
     }
 
-    static async getExistingWordsMap(deck: string): Promise<Map<string, Record<string, string>>> {
+    static async updateNoteFields(noteId: number, fields: Record<string, string>): Promise<void> {
+        await this.invoke('updateNoteFields', {
+            note: {
+                id: noteId,
+                fields: fields
+            }
+        });
+    }
+
+    static async getExistingWordsMap(deck: string): Promise<Map<string, { noteId: number, fields: Record<string, string>}>> {
         const notes = await this.invoke('findNotes', {
             query: `deck:"${deck}"`
         });
@@ -74,7 +83,7 @@ export class AnkiService {
             info = info.concat(chunkInfo);
         }
 
-        const map = new Map<string, Record<string, string>>();
+        const map = new Map<string, { noteId: number, fields: Record<string, string>}>();
         for (const n of info) {
             const fields: Record<string, string> = {};
             for (const [k, v] of Object.entries(n.fields)) {
@@ -82,7 +91,7 @@ export class AnkiService {
             }
             const primaryKey = n.fields.Word?.value || n.fields.Kanji?.value;
             if (primaryKey) {
-                map.set(primaryKey, fields);
+                map.set(primaryKey, { noteId: n.noteId, fields });
             }
         }
         return map;

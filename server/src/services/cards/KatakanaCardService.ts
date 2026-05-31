@@ -13,7 +13,7 @@ export class KatakanaCardService extends BaseCardService {
         return 'JP::Katakana'; // The legacy model name was config.ANKI_MODEL
     }
 
-    async process(data: Record<string, string>, noteId: string, deckName: string): Promise<Record<string, string>> {
+    async process(data: Record<string, string>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
         try {
             const word = data.word || data.Word || '';
             const meaning = data.meaning || data.Meaning || '';
@@ -95,12 +95,16 @@ export class KatakanaCardService extends BaseCardService {
                 fields[`AudioSentence${i + 1}_Fast`] = `[sound:${fastFile}]`;
             }
 
-            await AnkiService.addNote({
-                deckName: deckName,
-                modelName: this.getModelName(),
-                fields,
-                tags: ['katakana', 'import-auto']
-            });
+            if (isUpdate && ankiNoteId) {
+                await AnkiService.updateNoteFields(ankiNoteId, fields);
+            } else {
+                await AnkiService.addNote({
+                    deckName: deckName,
+                    modelName: this.getModelName(),
+                    fields,
+                    tags: ['katakana', 'import-auto']
+                });
+            }
 
             return fields;
         } catch (error: any) {

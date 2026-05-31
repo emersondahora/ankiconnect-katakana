@@ -13,7 +13,7 @@ export class VocabularyCardService extends BaseCardService {
         return 'JP::Vocabulary';
     }
 
-    async process(data: Record<string, string>, noteId: string, deckName: string): Promise<Record<string, string>> {
+    async process(data: Record<string, string>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
         try {
             const word = data.Word || data.word || '';
             const meaning = data.Meaning || data.meaning || '';
@@ -99,12 +99,16 @@ export class VocabularyCardService extends BaseCardService {
                 SentencesJson: JSON.stringify(sentencesList)
             };
 
-            await AnkiService.addNote({
-                deckName: deckName,
-                modelName: this.getModelName(),
-                fields,
-                tags: ['vocabulary', 'import-auto']
-            });
+            if (isUpdate && ankiNoteId) {
+                await AnkiService.updateNoteFields(ankiNoteId, fields);
+            } else {
+                await AnkiService.addNote({
+                    deckName: deckName,
+                    modelName: this.getModelName(),
+                    fields,
+                    tags: ['vocabulary', 'import-auto']
+                });
+            }
 
             return fields;
         } catch (error: any) {

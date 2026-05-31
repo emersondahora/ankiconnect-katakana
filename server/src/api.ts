@@ -314,7 +314,6 @@ app.post('/api/upload/manual', upload.single('file'), async (req, res) => {
         const deck = req.body.deck || config.ANKI_DECK;
         const modelName = req.body.modelName || config.ANKI_MODEL;
         
-        // fields are passed as form data or json, we map it into an item
         const item = { ...req.body };
         if (req.file) {
             item._uploadedFilePath = req.file.path;
@@ -322,8 +321,25 @@ app.post('/api/upload/manual', upload.single('file'), async (req, res) => {
         }
         item._isManualImport = true;
         
+        const primaryKey = item.Word || item.word || item.Kanji || item.kanji;
+        const forceUpdate = req.body.forceUpdate === 'true';
+        
+        if (primaryKey && !forceUpdate) {
+            const existingWordsMap = await AnkiService.getExistingWordsMap(deck);
+            const existing = existingWordsMap.get(primaryKey);
+            if (existing) {
+                return res.status(409).json({ duplicate: true, existing });
+            }
+        }
+        
+        let ankiNoteId: number | undefined = undefined;
+        if (primaryKey && forceUpdate) {
+            const existingWordsMap = await AnkiService.getExistingWordsMap(deck);
+            ankiNoteId = existingWordsMap.get(primaryKey)?.noteId;
+        }
+
         const noteId = `note_manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        const fields = await CardCreationService.process(item, noteId, deck, modelName);
+        const fields = await CardCreationService.process(item, noteId, deck, modelName, forceUpdate, ankiNoteId);
         
         res.json({ success: true, fields });
     } catch (error: any) {

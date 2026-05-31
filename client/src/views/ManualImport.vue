@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { ImportAPI } from '../api/import'
 import DeckSelector from '../components/DeckSelector.vue'
 import { useCache } from '../composables/useCache'
+import { openPreviewModal } from '../composables/usePreviewMode'
 import { Save, Image as ImageIcon, CheckCircle, XCircle } from 'lucide-vue-next'
 
 const selectedDeck = useCache('selected-deck', '')
@@ -26,12 +27,13 @@ const handleFileSelect = (e: Event) => {
 }
 
 const clearForm = () => {
-  formData.value = { Kanji: '', Meaning: '', Onyomi: '', Kunyomi: '', Words: '', Sentences: '', Word: '', _generateImage: false }
+  const lastGen = formData.value._generateImage
+  formData.value = { Kanji: '', Meaning: '', Onyomi: '', Kunyomi: '', Words: '', Sentences: '', Word: '', _generateImage: lastGen }
   imageFile.value = null
   if (fileInput.value) fileInput.value.value = ''
 }
 
-const submitManual = async () => {
+const submitManual = async (forceUpdate = false) => {
   if (!selectedDeck.value) {
     statusMessage.value = { type: 'error', text: 'Selecione um deck destino.' }
     return
@@ -43,6 +45,7 @@ const submitManual = async () => {
   const payload = new FormData()
   payload.append('deck', selectedDeck.value)
   payload.append('modelName', selectedModel.value)
+  payload.append('forceUpdate', forceUpdate ? 'true' : 'false')
   
   // Appends os campos dependendo do modelo
   if (selectedModel.value === 'JP::Kanji') {
@@ -67,9 +70,20 @@ const submitManual = async () => {
       body: payload
     })
     const data = await res.json()
+    
+    if (res.status === 409) {
+      if (confirm('Essa nota já existe. Deseja atualizar os dados existentes com os novos valores?')) {
+        await submitManual(true)
+      }
+      return
+    }
+    
     if (!res.ok) throw new Error(data.error || 'Erro ao importar')
     
     statusMessage.value = { type: 'success', text: `Nota importada com sucesso no modelo ${selectedModel.value}!` }
+    if (data.fields) {
+      openPreviewModal(data.fields)
+    }
     clearForm()
   } catch (err: any) {
     statusMessage.value = { type: 'error', text: err.message }
@@ -159,7 +173,7 @@ const submitManual = async () => {
                 <span class="text-slate-500">ou</span>
                 <label class="flex items-center space-x-2 text-sm text-slate-300 cursor-pointer">
                   <input type="checkbox" v-model="formData._generateImage" class="rounded border-slate-600 bg-slate-900 text-indigo-500 focus:ring-indigo-500" />
-                  <span>✨ Gerar com Nano Banana</span>
+                  <span>✨ Gerar com IA</span>
                 </label>
               </div>
             </div>
