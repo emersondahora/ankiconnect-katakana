@@ -28,6 +28,7 @@ const isAutoDecisionEnabled = ref(false)
 const isModalHidden = ref(false)
 
 const selectedDeck = useCache('selected-deck', '')
+const selectedModel = useCache('selected-model', 'JP::Katakana')
 
 const activeDecision = computed(() => pendingDecisions.value.length > 0 ? pendingDecisions.value[0] : null)
 const isDecisionModalOpen = computed(() => !isModalHidden.value && pendingDecisions.value.length > 0)
@@ -172,6 +173,7 @@ const startUpload = async () => {
   const formData = new FormData()
   formData.append('file', selectedFile.value)
   formData.append('deck', selectedDeck.value)
+  formData.append('modelName', selectedModel.value)
   
   try {
     startSSE()
@@ -213,9 +215,26 @@ onUnmounted(() => {
            class="border-2 border-dashed border-slate-600 rounded-xl bg-slate-800/50 flex flex-col items-center justify-center p-12 transition-colors hover:bg-slate-800 h-full"
            @dragover.prevent @drop.prevent="handleFileDrop">
            
-        <div class="mb-10 w-full max-w-md text-left z-10">
-          <label class="block text-sm font-medium text-slate-300 mb-2">Target Deck</label>
-          <DeckSelector v-model="selectedDeck" />
+        <div class="mb-10 w-full max-w-md text-left z-10 space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Target Deck</label>
+            <DeckSelector v-model="selectedDeck" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-300 mb-2">Anki Model</label>
+            <select v-model="selectedModel" class="w-full bg-slate-700 text-white rounded p-2 border border-slate-600 focus:outline-none focus:border-indigo-500">
+              <option value="JP::Katakana">JP::Katakana</option>
+              <option value="JP::Kanji">JP::Kanji</option>
+              <option value="JP::Vocabulary">JP::Vocabulary</option>
+            </select>
+          </div>
+          
+          <div class="mt-4 p-3 bg-slate-700/30 border border-slate-600/50 rounded-lg text-sm text-slate-300">
+            <h4 class="font-medium text-white mb-1 flex items-center space-x-1"><AlertCircle class="w-4 h-4"/> <span>Formato do CSV esperado:</span></h4>
+            <div v-if="selectedModel === 'JP::Katakana'">word,meaning,sentences,image_terms</div>
+            <div v-else-if="selectedModel === 'JP::Kanji'">Kanji,Meaning,Onyomi,Kunyomi,Words,Sentences<br/><span class="text-xs text-slate-400">Listas separadas por || e significados por |</span></div>
+            <div v-else-if="selectedModel === 'JP::Vocabulary'">Word,Meaning,Sentences<br/><span class="text-xs text-slate-400">Listas separadas por || e significados por |</span></div>
+          </div>
         </div>
         
         <div v-if="!selectedFile" class="text-center">

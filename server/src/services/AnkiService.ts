@@ -80,8 +80,9 @@ export class AnkiService {
             for (const [k, v] of Object.entries(n.fields)) {
                 fields[k] = (v as any).value;
             }
-            if (n.fields.Word && n.fields.Word.value) {
-                map.set(n.fields.Word.value, fields);
+            const primaryKey = n.fields.Word?.value || n.fields.Kanji?.value;
+            if (primaryKey) {
+                map.set(primaryKey, fields);
             }
         }
         return map;

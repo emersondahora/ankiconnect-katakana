@@ -295,11 +295,12 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     try {
         const words = await loadCSV(req.file.path);
         const deck = req.body.deck || config.ANKI_DECK;
+        const modelName = req.body.modelName || config.ANKI_MODEL;
         
         isProcessing = true;
         res.json({ success: true, total: words.length });
 
-        processBatch(words, deck).finally(() => {
+        processBatch(words, deck, modelName).finally(() => {
             isProcessing = false;
         });
 
@@ -308,44 +309,60 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     }
 });
 
-async function processBatch(words: any[], deck: string) {
+app.post('/api/upload/manual', upload.single('file'), async (req, res) => {
+    try {
+        const deck = req.body.deck || config.ANKI_DECK;
+        const modelName = req.body.modelName || config.ANKI_MODEL;
+        
+        // fields are passed as form data or json, we map it into an item
+        const item = { ...req.body };
+        if (req.file) {
+            item._uploadedFilePath = req.file.path;
+            item._uploadedFileName = req.file.originalname;
+        }
+        item._isManualImport = true;
+        
+        const noteId = `note_manual_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const fields = await CardCreationService.process(item, noteId, deck, modelName);
+        
+        res.json({ success: true, fields });
+    } catch (error: any) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+async function processBatch(words: any[], deck: string, modelName: string) {
     try {
         await AnkiService.createDeck(deck);
         const existingWordsMap = await AnkiService.getExistingWordsMap(deck);
         
         const total = words.length;
         let completed = 0;
-        
-        // Use a limit to not overload the API completely, but allow some concurrency
-        // Anki and TTS will have their own limits in the services.
-        // We'll process everything concurrently to allow the background process
-        // to continue even if some items are waiting for user decisions.
 
         const promises = words.map(async (item, index) => {
             const current = index + 1;
+            const primaryKey = item.word || item.Word || item.Kanji || item.kanji || `unknown_${index}`;
             
-            if (existingWordsMap.has(item.word)) {
+            if (existingWordsMap.has(primaryKey)) {
                 completed++;
                 progressEmitter.emit('progress', { 
-                    current: completed, total, word: item.word, status: 'skipped',
-                    fields: existingWordsMap.get(item.word)
+                    current: completed, total, word: primaryKey, status: 'skipped',
+                    fields: existingWordsMap.get(primaryKey)
                 });
                 return;
             }
 
             try {
-                // generate a unique noteId for this processing item
                 const noteId = `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                
-                const fields = await CardCreationService.process(item, noteId, deck);
+                const fields = await CardCreationService.process(item, noteId, deck, modelName);
                 completed++;
                 progressEmitter.emit('progress', { 
-                    current: completed, total, word: item.word, status: 'success', fields 
+                    current: completed, total, word: primaryKey, status: 'success', fields 
                 });
             } catch (error: any) {
                 completed++;
                 progressEmitter.emit('progress', { 
-                    current: completed, total, word: item.word, status: 'failed', error: error.message 
+                    current: completed, total, word: primaryKey, status: 'failed', error: error.message 
                 });
             }
         });

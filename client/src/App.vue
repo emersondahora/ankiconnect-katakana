@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView, RouterLink, useRoute } from 'vue-router'
-import { LayoutDashboard, UploadCloud, Library, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { LayoutDashboard, UploadCloud, FilePlus, Library, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { isAnkiOnline, isBackendOnline, checkStatus } from './composables/useAnkiStatus'
 import { useCache } from './composables/useCache'
@@ -65,6 +65,18 @@ onMounted(() => {
         >
           <UploadCloud class="w-5 h-5 shrink-0" />
           <span v-if="!isSidebarCollapsed">Bulk Import</span>
+        </RouterLink>
+
+        <RouterLink to="/import/manual"
+          class="flex items-center rounded-lg transition-colors px-3 py-3"
+          :class="[
+            route.path === '/import/manual' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-white',
+            isSidebarCollapsed ? 'justify-center' : 'space-x-3'
+          ]"
+          :title="isSidebarCollapsed ? 'Manual Import' : ''"
+        >
+          <FilePlus class="w-5 h-5 shrink-0" />
+          <span v-if="!isSidebarCollapsed">Manual Import</span>
         </RouterLink>
 
         <RouterLink to="/browser"

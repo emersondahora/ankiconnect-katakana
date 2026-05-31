@@ -10,6 +10,7 @@
     "migrate": "tsx src/migrations/runMigrations.ts"
   },
   "dependencies": {
+    "@google/genai": "^2.7.0",
     "axios": "^1.6.0",
     "cli-progress": "^3.12.0",
     "cors": "^2.8.6",
@@ -18,6 +19,7 @@
     "express": "^5.2.1",
     "fluent-ffmpeg": "^2.1.2",
     "google-tts-api": "^2.0.2",
+    "mime": "^4.1.0",
     "multer": "^2.1.1"
   },
   "devDependencies": {
@@ -25,6 +27,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/fluent-ffmpeg": "^2.1.24",
+    "@types/mime": "^3.0.4",
     "@types/multer": "^2.1.0",
     "@types/node": "^20.10.0",
     "tsx": "^4.6.2",
