@@ -12,7 +12,16 @@ export class AudioService {
     static async generateAudio(text: string, fileName: string): Promise<string> {
         return ttsLimit(async () => {
             try {
-            const url = gtts.getAudioUrl(text, { lang: 'ja', slow: false });
+            // Clean Anki furigana format (e.g., 食[た]べ物[もの] -> たべもの)
+            let cleanText = text;
+            if (cleanText.includes('[')) {
+                // 1. Base separada por espaço: " 食べる[たべる]" -> " たべる"
+                cleanText = cleanText.replace(/ ([^\s\[]+)\[([^\]]+)\]/g, ' $2');
+                // 2. Base de kanji adjacente: "食[た]べ物[もの]" -> "たべもの"
+                cleanText = cleanText.replace(/([\u4e00-\u9faf\u3400-\u4dbf\u3005]+)\[([^\]]+)\]/g, '$2');
+            }
+
+            const url = gtts.getAudioUrl(cleanText, { lang: 'ja', slow: false });
             // For now we keep the audio folder in the root or relative to CWD
             const filePath = path.join(process.cwd(), 'audio', fileName);
 

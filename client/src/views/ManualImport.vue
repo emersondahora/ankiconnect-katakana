@@ -11,6 +11,7 @@ import {
   XCircle,
   Sparkles,
   Loader2,
+  Trash2,
 } from "lucide-vue-next";
 
 const selectedDeck = useCache("selected-deck", "");
@@ -215,7 +216,6 @@ const submitManual = async (forceUpdate = false) => {
     if (data.fields) {
       openPreviewModal(data.fields, selectedModel.value, true);
     }
-    // clearForm()
   } catch (err: any) {
     statusMessage.value = { type: "error", text: err.message };
   } finally {
@@ -623,7 +623,29 @@ const submitManual = async (forceUpdate = false) => {
             </div>
           </template>
 
-          <div class="pt-4 flex items-center justify-between">
+          <div class="pt-4 flex items-end justify-end gap-5">
+            <button
+              type="button"
+              @click="clearForm()"
+              class="bg-gray-600 hover:bg-gray-500 disabled:opacity-50 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+            >
+              <Trash2 class="w-4 h-4" />
+              <span>Limpar Form</span>
+            </button>
+            <button
+              type="submit"
+              :disabled="isFormDisabled"
+              class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
+            >
+              <span
+                v-if="isSubmitting"
+                class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"
+              ></span>
+              <Save v-else class="w-4 h-4" />
+              <span>Importar Nota</span>
+            </button>
+          </div>
+          <div class="flex items-end justify-between">
             <div class="flex items-center space-x-2">
               <span
                 v-if="statusMessage && statusMessage.type === 'success'"
@@ -638,18 +660,6 @@ const submitManual = async (forceUpdate = false) => {
                 <span>{{ statusMessage.text }}</span></span
               >
             </div>
-            <button
-              type="submit"
-              :disabled="isFormDisabled"
-              class="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2"
-            >
-              <span
-                v-if="isSubmitting"
-                class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"
-              ></span>
-              <Save v-else class="w-4 h-4" />
-              <span>Importar Nota</span>
-            </button>
           </div>
         </form>
       </div>
