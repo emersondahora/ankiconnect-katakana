@@ -9,7 +9,7 @@ export class KanjiCardService extends BaseCardService {
         return 'JP::Kanji';
     }
 
-    async process(data: Record<string, string>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
+    async process(data: Record<string, any>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
         try {
             const kanji = data.Kanji || data.kanji || '';
             const meaning = data.Meaning || data.meaning || '';

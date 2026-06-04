@@ -12,7 +12,7 @@ export interface ParsedItem {
 export abstract class BaseCardService {
     abstract getModelName(): string;
     
-    abstract process(data: Record<string, string>, noteId: string, deckName: string, isUpdate?: boolean, ankiNoteId?: number): Promise<Record<string, string>>;
+    abstract process(data: Record<string, any>, noteId: string, deckName: string, isUpdate?: boolean, ankiNoteId?: number): Promise<Record<string, string>>;
 
     /**
      * Parses a string like "Word1|Meaning1||Word2|Meaning2" into an array of objects

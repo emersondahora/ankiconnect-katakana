@@ -16,7 +16,7 @@ export class CardCreationService {
         }
     }
 
-    static async process(item: Record<string, string>, noteId: string, deckName: string, modelName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
+    static async process(item: Record<string, any>, noteId: string, deckName: string, modelName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
         const service = this.getService(modelName);
         return await service.process(item, noteId, deckName, isUpdate, ankiNoteId);
     }

@@ -17,7 +17,8 @@ export class NanoBananaService {
             
             const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
             //const prompt = `Gere uma ilustracao para a palavra: ${word}. Estilo anime, fundo limpo, alta qualidade.`;
-            const prompt = `Gere uma ilustracao para a palavra: ${word}. Estilo anime, fundo limpo, alta qualidade. No formato de flashcard no tamanho de 512x512, coloque a palavra com furigana na imagem.`;
+            const prompt = `Gere uma ilustracao para a palavra: ${word}. Estilo anime, fundo limpo, alta qualidade. No formato de flashcard no tamanho de 512x512, coloque a palavra com furigana na imagem. Se a palavra tiver colchetes [], ela está usando o estilo de furigana do anki. `;
+            console.log('Gerando imagem...', prompt);
             
             const response = await ai.models.generateImages({
                 model: 'imagen-4.0-generate-001',

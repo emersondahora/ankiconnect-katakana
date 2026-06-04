@@ -13,7 +13,7 @@ export class VocabularyCardService extends BaseCardService {
         return 'JP::Vocabulary';
     }
 
-    async process(data: Record<string, string>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
+    async process(data: Record<string, any>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
         try {
             const word = data.Word || data.word || '';
             const meaning = data.Meaning || data.meaning || '';
@@ -39,7 +39,7 @@ export class VocabularyCardService extends BaseCardService {
             // In the manual import or API, user might provide a File or a Boolean flag to auto-generate
             if (data._generateImage === 'true' || data._generateImage === true) {
                 // Auto generate
-                const imgData = await NanoBananaService.generateIllustration(meaning || word); // using meaning for better prompt contexts, or word. The prompt is "Gere uma ilustração para a palavra: [palavra]"
+                const imgData = await NanoBananaService.generateIllustration(word || meaning); // using meaning for better prompt contexts, or word. The prompt is "Gere uma ilustração para a palavra: [palavra]"
                 if (imgData) {
                     const filename = `${noteId}_nano.${imgData.extension}`;
                     const localPath = path.join(process.cwd(), 'uploads', filename);

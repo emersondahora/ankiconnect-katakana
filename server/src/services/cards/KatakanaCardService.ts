@@ -13,7 +13,7 @@ export class KatakanaCardService extends BaseCardService {
         return 'JP::Katakana'; // The legacy model name was config.ANKI_MODEL
     }
 
-    async process(data: Record<string, string>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
+    async process(data: Record<string, any>, noteId: string, deckName: string, isUpdate = false, ankiNoteId?: number): Promise<Record<string, string>> {
         try {
             const word = data.word || data.Word || '';
             const meaning = data.meaning || data.Meaning || '';
