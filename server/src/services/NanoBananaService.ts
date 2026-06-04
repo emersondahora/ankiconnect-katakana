@@ -8,19 +8,33 @@ export class NanoBananaService {
      */
     static async generateIllustration(word: string): Promise<{ buffer: Buffer, mimeType: string, extension: string } | null> {
         try {
-            // Utilizamos o Pollinations para contornar bloqueios de conta na API do Gemini
-            const prompt = `Gere uma ilustracao para a palavra: ${word}. Estilo anime, fundo limpo, alta qualidade.`;
-            const encodedPrompt = encodeURIComponent(prompt);
-            const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true`;
-
-            const response = await axios.get(url, { responseType: 'arraybuffer' });
+            // Utilizamos a API oficial do Gemini (Imagen 3)
+            const { GoogleGenAI } = await import('@google/genai');
             
-            if (response.status === 200) {
-                const buffer = Buffer.from(response.data, 'binary');
-                const mimeType = response.headers['content-type'] || 'image/jpeg';
-                const extension = mime.getExtension(mimeType) || 'jpeg';
-                
-                return { buffer, mimeType, extension };
+            if (!process.env.GEMINI_API_KEY) {
+                throw new Error("GEMINI_API_KEY não está configurada no .env");
+            }
+            
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            //const prompt = `Gere uma ilustracao para a palavra: ${word}. Estilo anime, fundo limpo, alta qualidade.`;
+            const prompt = `Gere uma ilustracao para a palavra: ${word}. Estilo anime, fundo limpo, alta qualidade. No formato de flashcard no tamanho de 512x512, coloque a palavra com furigana na imagem.`;
+            
+            const response = await ai.models.generateImages({
+                model: 'imagen-4.0-generate-001',
+                prompt: prompt,
+                config: {
+                    numberOfImages: 1,
+                    outputMimeType: 'image/jpeg',
+                    aspectRatio: '1:1'
+                }
+            });
+
+            if (response.generatedImages && response.generatedImages.length > 0) {
+                const img = response.generatedImages[0].image;
+                if (img && img.imageBytes) {
+                    const buffer = Buffer.from(img.imageBytes, 'base64');
+                    return { buffer, mimeType: 'image/jpeg', extension: 'jpeg' };
+                }
             }
             
             return null;

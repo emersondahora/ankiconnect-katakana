@@ -40,41 +40,44 @@ export class ImageService {
     static async searchImages(query: string, limit: number = 10, source: string = 'pexels'): Promise<{ preview: string, original: string }[]> {
         if (source === 'pollinations_ai') {
             const results = [];
-            const encodedPrompt = encodeURIComponent(`A simple engraving drawing of ${query}, flashcard style, clear background`);
             const safeQuery = query.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            
-            // Limit for Pollinations to avoid massive queues, max 4
-            const maxLimit = Math.min(limit, 4);
-
-            for (let i = 1; i <= maxLimit; i++) {
-                const fileName = `pollinations_${safeQuery}_${i}.jpg`;
-                const filePath = path.join(process.cwd(), 'uploads', fileName);
-                const localUrl = `http://localhost:3000/uploads/${fileName}`;
-
-                if (fs.existsSync(filePath)) {
-                    results.push({ preview: localUrl, original: localUrl });
-                    continue;
-                }
-
+            if (source === 'pollinations_ai') {
                 try {
-                    // Seed deterministic based on index so it caches correctly
-                    const seed = 1000 + i;
-                    const url = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=512&height=512&nologo=true&seed=${seed}`;
+                    const { GoogleGenAI } = await import('@google/genai');
                     
-                    const response = await axios({ url, responseType: 'stream' });
-                    await new Promise((resolve, reject) => {
-                        const writer = fs.createWriteStream(filePath);
-                        response.data.pipe(writer)
-                            .on('finish', resolve)
-                            .on('error', reject);
+                    if (!process.env.GEMINI_API_KEY) {
+                        throw new Error("GEMINI_API_KEY não está configurada no .env");
+                    }
+                    
+                    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+
+                    const response = await ai.models.generateImages({
+                        model: 'imagen-4.0-generate-001',
+                        prompt: `A simple engraving drawing of ${query}, flashcard style, clear background`,
+                        config: {
+                            numberOfImages: limit,
+                            outputMimeType: 'image/jpeg',
+                            aspectRatio: '1:1'
+                        }
                     });
-                    
-                    results.push({ preview: localUrl, original: localUrl });
-                } catch (e) {
-                    console.error(`Failed to generate Pollinations image ${i}:`, e);
+
+                    if (response.generatedImages) {
+                        for (let i = 0; i < response.generatedImages.length; i++) {
+                            const img = response.generatedImages[i];
+                            if (img.image?.imageBytes) {
+                                const fileName = `gemini_imagen_${safeQuery}_${i}.jpg`;
+                                const filePath = path.join(process.cwd(), 'uploads', fileName);
+                                const localUrl = `http://localhost:${process.env.PORT || 3000}/uploads/${fileName}`;
+                                
+                                fs.writeFileSync(filePath, Buffer.from(img.image.imageBytes, 'base64'));
+                                results.push({ preview: localUrl, original: localUrl });
+                            }
+                        }
+                    }
+                } catch (e: any) {
+                    console.error(`Failed to generate Gemini Imagen images:`, e.message);
                 }
-            }
-            return results;
+            }return results;
         }
 
         if (!config.PEXELS_API_KEY || config.PEXELS_API_KEY === 'your_pexels_api_key_here') {

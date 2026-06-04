@@ -37,12 +37,23 @@ Não use Markdown, não use backticks, não adicione nenhum texto explicativo. A
         }
 
         try {
-            // Usamos Pollinations Text API (grátis e sem bloqueios)
-            const url = `https://text.pollinations.ai/${encodeURIComponent(prompt)}`;
-            const response = await axios.get(url);
+            // Utilizamos a API oficial do Gemini para texto (Gratuito e sem limites com chave)
+            const { GoogleGenAI } = await import('@google/genai');
+            
+            if (!process.env.GEMINI_API_KEY) {
+                throw new Error("GEMINI_API_KEY não está configurada no .env");
+            }
+            
+            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+            
+            // Usamos gemini-2.5-flash como padrão rápido e barato para texto
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt,
+            });
 
-            if (response.data && typeof response.data === 'string') {
-                let result = response.data.trim();
+            if (response.text) {
+                let result = response.text.trim();
                 result = result.replace(/^```(\w+)?\n/i, '').replace(/\n```$/i, '');
                 return result.trim();
             }
