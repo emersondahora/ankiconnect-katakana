@@ -35,7 +35,23 @@ export class KanjiCardService extends BaseCardService {
                 // Extrair apenas a tag <svg> e seu conteúdo, ignorando declarações XML, comentários e DTD
                 const svgContent = svgResp.data;
                 const match = svgContent.match(/<svg[\s\S]*<\/svg>/i);
-                strokeSvg = match ? match[0] : svgContent; 
+                if (match) {
+                    let svg = match[0];
+                    // AnkiDroid (JSoup) strips SVG tags that contain custom namespaces or colons in attributes
+                    // So we remove all kvg: attributes and xmlns:kvg
+                    svg = svg.replace(/kvg:[a-zA-Z0-9_-]+="[^"]*"/g, '');
+                    svg = svg.replace(/xmlns:kvg="[^"]*"/g, '');
+                    // Replace ids like kvg:098df with just 098df
+                    svg = svg.replace(/id="kvg:([^"]+)"/g, 'id="$1"');
+                    
+                    // Alterar stroke para currentColor para funcionar no Dark Mode
+                    svg = svg.replace(/stroke:#000000/gi, 'stroke:currentColor');
+                    
+                    // Base64 Encode para evitar qualquer bug do JSoup ou caracteres estranhos
+                    strokeSvg = Buffer.from(svg).toString('base64');
+                } else {
+                    strokeSvg = Buffer.from(svgContent).toString('base64');
+                } 
             } catch (err: any) {
                 console.warn(`Failed to fetch SVG for kanji ${kanji}: ${err.message}`);
             }

@@ -38,13 +38,16 @@ onMounted(async () => {
   }
 })
 
-watch(selectedDeck, async (newVal) => {
-  if (newVal) {
-    await fetchNotes()
-  } else {
-    notes.value = []
+watch(
+  [selectedDeck, isBackendOnline, isAnkiOnline],
+  async ([deck, backendOnline, ankiOnline]) => {
+    if (deck && backendOnline && ankiOnline) {
+      await fetchNotes()
+    } else {
+      notes.value = []
+    }
   }
-})
+)
 
 const fetchNotes = async () => {
   if (!selectedDeck.value) return
