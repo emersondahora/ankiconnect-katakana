@@ -5,7 +5,7 @@ import { AnkiService } from '../AnkiService.js';
 import { AudioService } from '../AudioService.js';
 import { getSearchTerms } from '../../utils/helpers.js';
 import { CardCreationError } from '../../errors/CustomErrors.js';
-import { progressEmitter, decisionEmitter } from '../../api.js';
+import { progressEmitter, decisionEmitter } from '../../controllers/EventController.js';
 import { config } from '../../config/env.js';
 
 export class KatakanaCardService extends BaseCardService {

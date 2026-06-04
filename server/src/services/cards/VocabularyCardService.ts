@@ -6,7 +6,7 @@ import { AudioService } from '../AudioService.js';
 import { FuriganaService } from '../FuriganaService.js';
 import { NanoBananaService } from '../NanoBananaService.js';
 import { CardCreationError } from '../../errors/CustomErrors.js';
-import { progressEmitter, decisionEmitter } from '../../api.js';
+import { progressEmitter, decisionEmitter } from '../../controllers/EventController.js';
 
 export class VocabularyCardService extends BaseCardService {
     getModelName(): string {

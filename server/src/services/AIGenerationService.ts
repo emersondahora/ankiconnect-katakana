@@ -1,52 +1,26 @@
-import axios from 'axios';
+import { GoogleGenAI } from '@google/genai';
+import { PROMPTS, PromptType, renderPrompt } from '../config/prompts.js';
 
 export class AIGenerationService {
-    static async generate(type: string, item: string, context?: string, maxCount: number = 5): Promise<string> {
-        let prompt = '';
-
-        if (type === 'Meaning') {
-            prompt = `Traduza o termo japonês '${item}' para o português do Brasil. Responda APENAS com a tradução direta (pode ser separada por vírgulas se houver mais de um significado comum), sem nenhum outro texto ou formatação.`;
-        } else if (type === 'Onyomi') {
-            prompt = `Quais são as leituras Onyomi (em katakana) do Kanji '${item}'? Responda APENAS com as leituras separadas por vírgula, sem nenhum outro texto.`;
-        } else if (type === 'Kunyomi') {
-            prompt = `Quais são as leituras Kunyomi (em hiragana) do Kanji '${item}'? Responda APENAS com as leituras separadas por vírgula, sem nenhum outro texto.`;
-        } else if (type === 'Words') {
-            prompt = `Forneça ${maxCount} palavras em japonês muito comuns que utilizam o Kanji '${item}'. Você deve retornar o resultado ESTRITAMENTE no seguinte formato exato de texto (separador duplo pipe entre itens, pipe simples entre palavra e tradução):
-Palavra|Significado em Português||Palavra2|Significado2
-
-Não use Markdown, não use backticks, não adicione nenhum texto explicativo. Apenas o texto puro nesse formato.`;
-        } else if (type === 'Sentences') {
-            // Se houver context (lista de palavras), geramos sentenças para aquelas palavras. 
-            if (context && context.trim() !== '') {
-                const words = context.split('||').map(p => p.split('|')[0]).filter(Boolean);
-                const wordsList = words.join(', ');
-                prompt = `Para cada uma das seguintes palavras em japonês: ${wordsList}, forneça ${maxCount} frase(s) de exemplo bem comum para cada palavra.
-Você deve retornar o resultado ESTRITAMENTE no seguinte formato exato de texto (separador duplo pipe entre itens, pipe simples entre frase e tradução):
-Frase em japonês|Tradução para português||Frase2|Tradução2
-
-Não use Markdown, não use backticks, não adicione nenhum texto explicativo. Apenas o texto puro nesse formato.`;
-            } else {
-                prompt = `Para a palavra em japonês '${item}', forneça ${maxCount} frases de exemplo bem comuns.
-Você deve retornar o resultado ESTRITAMENTE no seguinte formato exato de texto (separador duplo pipe entre itens, pipe simples entre frase e tradução):
-Frase em japonês|Tradução para português||Frase2|Tradução2
-
-Não use Markdown, não use backticks, não adicione nenhum texto explicativo. Apenas o texto puro nesse formato.`;
-            }
-        } else {
-            throw new Error(`Tipo de geração desconhecido: ${type}`);
+    
+    private static getAi() {
+        if (!process.env.GEMINI_API_KEY) {
+            throw new Error("GEMINI_API_KEY não está configurada no .env");
         }
+        return new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    }
 
+    static async generate(type: PromptType, item: string, context?: string, maxCount: number = 5): Promise<string> {
         try {
-            // Utilizamos a API oficial do Gemini para texto (Gratuito e sem limites com chave)
-            const { GoogleGenAI } = await import('@google/genai');
+            const variables: Record<string, string | number> = {
+                item: item,
+                maxCount: maxCount,
+                context: context || ''
+            };
+
+            const prompt = renderPrompt(type, variables);
+            const ai = this.getAi();
             
-            if (!process.env.GEMINI_API_KEY) {
-                throw new Error("GEMINI_API_KEY não está configurada no .env");
-            }
-            
-            const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-            
-            // Usamos gemini-2.5-flash como padrão rápido e barato para texto
             const response = await ai.models.generateContent({
                 model: 'gemini-2.5-flash',
                 contents: prompt,
@@ -62,4 +36,74 @@ Não use Markdown, não use backticks, não adicione nenhum texto explicativo. A
             throw new Error(`Falha ao gerar ${type} via IA: ${error.message}`);
         }
     }
+
+    static async generateBatch(
+        modelName: string, 
+        filledFields: Record<string, string>, 
+        targetFields: string[], 
+        maxWords: number = 5, 
+        maxSentences: number = 5
+    ): Promise<Record<string, string>> {
+        try {
+            const ai = this.getAi();
+            
+            // Build the dynamic prompt based on what's filled and what's targeted
+            let basePrompt = `Preencha os campos vazios do flashcard de japonês. Retorne um JSON ESTRITO contendo SOMENTE as chaves solicitadas.\n`;
+            basePrompt += `Você deve preencher os campos respeitando o contexto. Use o formato especificado para cada campo.\n\n`;
+            
+            basePrompt += `Campos já preenchidos (use como contexto primário):\n`;
+            for (const [key, val] of Object.entries(filledFields)) {
+                basePrompt += `- ${key}: ${val}\n`;
+            }
+
+            basePrompt += `\nVocê precisa gerar os seguintes campos no JSON:\n`;
+
+            const requestedFormat: any = {};
+
+            if (targetFields.includes('Meaning')) {
+                basePrompt += `- Meaning: O significado em português brasileiro.\n`;
+                requestedFormat['Meaning'] = 'string (apenas as traduções)';
+            }
+            if (targetFields.includes('Onyomi')) {
+                basePrompt += `- Onyomi: A leitura onyomi em katakana.\n`;
+                requestedFormat['Onyomi'] = 'string (separado por vírgula)';
+            }
+            if (targetFields.includes('Kunyomi')) {
+                basePrompt += `- Kunyomi: A leitura kunyomi em hiragana.\n`;
+                requestedFormat['Kunyomi'] = 'string (separado por vírgula)';
+            }
+            if (targetFields.includes('Words')) {
+                basePrompt += `- Words: Forneça ${maxWords} palavras muito comuns que usem o Kanji fornecido. O formato desta string DEVE ser EXATAMENTE: Palavra|Significado||Palavra2|Significado2\n`;
+                requestedFormat['Words'] = 'string (Palavra|Significado||Palavra2|Significado2)';
+            }
+            if (targetFields.includes('Sentences')) {
+                if (targetFields.includes('Words')) {
+                    basePrompt += `- Sentences: Forneça ${maxSentences} frases usando as palavras que você gerar no campo Words. O formato desta string DEVE ser EXATAMENTE: Frase em japonês|Tradução||Frase2|Tradução2\n`;
+                } else if (filledFields['Words']) {
+                    basePrompt += `- Sentences: Forneça ${maxSentences} frases usando as palavras do campo Words já preenchido. O formato desta string DEVE ser EXATAMENTE: Frase em japonês|Tradução||Frase2|Tradução2\n`;
+                } else {
+                    basePrompt += `- Sentences: Forneça ${maxSentences} frases usando o item base. O formato desta string DEVE ser EXATAMENTE: Frase em japonês|Tradução||Frase2|Tradução2\n`;
+                }
+                requestedFormat['Sentences'] = 'string (Frase em japonês|Tradução||Frase2|Tradução2)';
+            }
+
+            basePrompt += `\nExemplo de saída JSON esperado: ${JSON.stringify(requestedFormat, null, 2)}`;
+
+            const response = await ai.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: basePrompt,
+                config: {
+                    responseMimeType: 'application/json'
+                }
+            });
+
+            if (response.text) {
+                return JSON.parse(response.text.trim());
+            }
+            return {};
+        } catch (error: any) {
+            throw new Error(`Falha no processamento em lote via IA: ${error.message}`);
+        }
+    }
 }
+
