@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { Image as ImageIcon } from 'lucide-vue-next';
 import AiTextField from '../fields/AiTextField.vue';
 import AiTextareaField from '../fields/AiTextareaField.vue';
@@ -51,6 +51,25 @@ const handleFileSelect = (e: Event) => {
         emit('update:imageFile', null);
     }
 };
+
+const handlePaste = (e: ClipboardEvent) => {
+    if (e.clipboardData && e.clipboardData.files.length > 0) {
+        const file = e.clipboardData.files[0];
+        if (file.type.startsWith('image/')) {
+            imageFile.value = file;
+            emit('update:imageFile', file);
+            e.preventDefault();
+        }
+    }
+};
+
+onMounted(() => {
+    window.addEventListener('paste', handlePaste);
+});
+
+onUnmounted(() => {
+    window.removeEventListener('paste', handlePaste);
+});
 
 defineExpose({
     clearImage: () => {
@@ -105,7 +124,7 @@ defineExpose({
             <div class="flex items-center space-x-4">
                 <label class="flex items-center space-x-2 cursor-pointer bg-slate-700 hover:bg-slate-600 px-3 py-2 rounded transition-colors text-sm text-white">
                     <ImageIcon class="w-4 h-4" />
-                    <span>Upload (JPG, PNG)</span>
+                    <span>Upload ou Cole (Ctrl+V)</span>
                     <input
                         type="file"
                         ref="fileInput"
