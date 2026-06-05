@@ -243,7 +243,7 @@ const iframeHtml = computed(() => {
           <iframe 
             class="w-full h-full border-0 absolute inset-0"
             :srcdoc="iframeHtml"
-            sandbox="allow-scripts allow-same-origin"
+            sandbox="allow-scripts allow-same-origin allow-popups allow-modals"
           ></iframe>
         </div>
 
