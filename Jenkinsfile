@@ -44,23 +44,28 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                // Utiliza a credencial do Jenkins para fazer login no Docker Hub de forma segura
-                withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh '''
-                        # Tenta fazer o login e exibe a mensagem de sucesso ou falha
-                        docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
-                        
-                        # Client Push
-                        docker push ${CLIENT_IMAGE}:${TAG}
-                        docker push ${CLIENT_IMAGE}:latest
-                        
-                        # Server Push
-                        docker push ${SERVER_IMAGE}:${TAG}
-                        docker push ${SERVER_IMAGE}:latest
-                        
-                        # Logout por segurança
-                        docker logout
-                    '''
+                script {
+                    echo "Iniciando Push usando o plugin nativo do Docker..."
+                    try {
+                        // Usa a função nativa do Jenkins que gerencia a autenticação com segurança
+                        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                            
+                            // Client
+                            def clientImg = docker.image("${CLIENT_IMAGE}:${TAG}")
+                            clientImg.push()
+                            clientImg.push('latest')
+                            
+                            // Server
+                            def serverImg = docker.image("${SERVER_IMAGE}:${TAG}")
+                            serverImg.push()
+                            serverImg.push('latest')
+                            
+                        }
+                    } catch (Exception e) {
+                        echo "===== OCORREU UM ERRO DURANTE O PUSH ====="
+                        echo e.toString()
+                        throw e
+                    }
                 }
             }
         }
