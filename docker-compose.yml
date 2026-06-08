@@ -11,6 +11,7 @@ services:
     environment:
       # Injeta a URL da API no frontend dinamicamente
       - VITE_API_URL=https://anki-api.odahora.dev.br/api
+      - VITE_GOOGLE_CLIENT_ID=385270554239-mc1fg20d2h0jqpq8bvjbv91d1h03htr0.apps.googleusercontent.com
     depends_on:
       - server
 
@@ -24,6 +25,9 @@ services:
     environment:
       # Aponta para o AnkiConnect no seu PC local (necessário que o servidor alcance este IP)
       - ANKI_URL=http://10.1.1.70:8765
+      - GOOGLE_CLIENT_ID=385270554239-mc1fg20d2h0jqpq8bvjbv91d1h03htr0.apps.googleusercontent.com
+      - ALLOWED_EMAIL=emersondahora@gmail.com
+      - JWT_SECRET=super_secret_jwt_key_ankiconnect_katakana
 
   # Serviço do Watchtower (Deploy Automático)
   watchtower:

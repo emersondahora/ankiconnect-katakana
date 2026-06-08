@@ -1,17 +1,30 @@
 <script setup lang="ts">
-import { RouterView, RouterLink, useRoute } from 'vue-router'
-import { LayoutDashboard, UploadCloud, FilePlus, Library, ChevronLeft, ChevronRight } from 'lucide-vue-next'
+import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
+import { LayoutDashboard, UploadCloud, FilePlus, Library, ChevronLeft, ChevronRight, LogOut } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { isAnkiOnline, isBackendOnline, checkStatus } from './composables/useAnkiStatus'
 import { useCache } from './composables/useCache'
 import PreviewModal from './components/PreviewModal.vue'
 
 const route = useRoute()
+const router = useRouter()
 const isSidebarCollapsed = useCache('sidebar-collapsed', false)
 
+const logout = () => {
+  localStorage.removeItem('auth_token')
+  localStorage.removeItem('user')
+  router.push('/login')
+}
+
 onMounted(() => {
-  checkStatus()
-  setInterval(checkStatus, 5000)
+  if (route.name !== 'Login') {
+    checkStatus()
+  }
+  setInterval(() => {
+    if (route.name !== 'Login') {
+      checkStatus()
+    }
+  }, 5000)
 })
 </script>
 
@@ -19,6 +32,7 @@ onMounted(() => {
   <div class="flex h-screen bg-slate-900 text-slate-50 font-sans">
     <!-- Sidebar -->
     <aside
+      v-if="route.name !== 'Login'"
       class="bg-slate-800 border-r border-slate-700 flex flex-col shrink-0 transition-all duration-300"
       :class="isSidebarCollapsed ? 'w-16' : 'w-64'"
     >
@@ -90,7 +104,22 @@ onMounted(() => {
           <Library class="w-5 h-5 shrink-0" />
           <span v-if="!isSidebarCollapsed">Deck Browser</span>
         </RouterLink>
+
       </nav>
+
+      <!-- Bottom Actions -->
+      <div class="px-2 pb-4 shrink-0">
+        <button @click="logout"
+          class="flex items-center w-full rounded-lg transition-colors px-3 py-3 text-slate-400 hover:bg-red-500/10 hover:text-red-400"
+          :class="[
+            isSidebarCollapsed ? 'justify-center' : 'space-x-3'
+          ]"
+          :title="isSidebarCollapsed ? 'Logout' : ''"
+        >
+          <LogOut class="w-5 h-5 shrink-0" />
+          <span v-if="!isSidebarCollapsed">Logout</span>
+        </button>
+      </div>
 
       <!-- Status Indicator -->
       <div class="p-4 border-t border-slate-700 shrink-0">
