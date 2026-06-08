@@ -43,29 +43,25 @@ pipeline {
         }
 
         stage('Push to Docker Hub') {
-            environment {
-                // A sintaxe nativa do Pipeline Declarativo. 
-                // O Jenkins automaticamente cria DOCKER_CREDS_USR e DOCKER_CREDS_PSW.
-                DOCKER_CREDS = credentials('dockerhub-credentials')
-            }
             steps {
-                echo ">>> 1. INICIANDO O STAGE PUSH (Credenciais injetadas)"
-                
-                sh '''
-                    echo ">>> 2. INICIANDO DOCKER LOGIN"
-                    docker login -u "$DOCKER_CREDS_USR" -p "$DOCKER_CREDS_PSW"
-                '''
-                
-                echo ">>> 3. INICIANDO PUSH DO CLIENT..."
-                sh "docker push ${CLIENT_IMAGE}:${TAG}"
-                sh "docker push ${CLIENT_IMAGE}:latest"
-                
-                echo ">>> 4. INICIANDO PUSH DO SERVER..."
-                sh "docker push ${SERVER_IMAGE}:${TAG}"
-                sh "docker push ${SERVER_IMAGE}:latest"
-                
-                sh 'docker logout'
-                echo ">>> 5. FIM DO PUSH"
+                script {
+                    echo "Iniciando Push nativo usando Docker Pipeline Plugin..."
+                    
+                    // A função docker.withRegistry faz o login seguro
+                    // e limpa a sessão depois, sem precisar usar o comando 'sh'
+                    docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
+                        
+                        echo "Fazendo push do Client..."
+                        docker.image("${CLIENT_IMAGE}:${TAG}").push()
+                        docker.image("${CLIENT_IMAGE}:latest").push()
+                        
+                        echo "Fazendo push do Server..."
+                        docker.image("${SERVER_IMAGE}:${TAG}").push()
+                        docker.image("${SERVER_IMAGE}:latest").push()
+                        
+                        echo "Imagens enviadas com sucesso!"
+                    }
+                }
             }
         }
     }
