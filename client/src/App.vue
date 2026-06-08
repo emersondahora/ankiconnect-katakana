@@ -28,7 +28,7 @@ onMounted(() => {
           v-if="!isSidebarCollapsed"
           class="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent truncate"
         >
-          Anki Creator (2.0)
+          Anki Creator (2.0) - Katakana Edition
         </h1>
         <button
           @click="isSidebarCollapsed = !isSidebarCollapsed"
