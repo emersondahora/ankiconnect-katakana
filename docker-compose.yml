@@ -24,3 +24,13 @@ services:
     environment:
       # Aponta para o AnkiConnect no seu PC local (necessário que o servidor alcance este IP)
       - ANKI_URL=http://10.1.1.70:8765
+
+  # Serviço do Watchtower (Deploy Automático)
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    # Verifica a cada 120 segundos (2 min) APENAS os containers anki-client e anki-server
+    command: --interval 120 anki-client anki-server
+    restart: unless-stopped
