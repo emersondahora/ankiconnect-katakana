@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Sparkles, Loader2 } from 'lucide-vue-next';
+import { API_URL } from "../../api/config";
 
 const props = defineProps<{
     modelValue: string;
@@ -28,7 +29,7 @@ const generate = async () => {
     
     isGenerating.value = true;
     try {
-        const res = await fetch("http://localhost:3000/api/generate", {
+        const res = await fetch(`${API_URL}/generate`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

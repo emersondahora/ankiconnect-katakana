@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  # Serviço do Frontend (Nginx servindo o Vue3)
+  client:
+    image: emersondahora/ankiconnect-katakana-client:latest
+    container_name: anki-client
+    restart: unless-stopped
+    ports:
+      - "30080:80"  # Expondo na 30080 para o Cloudflare Tunnel
+    environment:
+      # Injeta a URL da API no frontend dinamicamente
+      - VITE_API_URL=https://anki-api.odahora.dev.br/api
+    depends_on:
+      - server
+
+  # Serviço do Backend (Node.js)
+  server:
+    image: emersondahora/ankiconnect-katakana-server:latest
+    container_name: anki-server
+    restart: unless-stopped
+    ports:
+      - "3300:3000"  # Expondo na 3300 para o Cloudflare Tunnel
+    environment:
+      # Aponta para o AnkiConnect no seu PC local (necessário que o servidor alcance este IP)
+      - ANKI_URL=http://10.1.1.70:8765

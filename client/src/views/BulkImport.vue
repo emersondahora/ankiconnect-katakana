@@ -112,7 +112,11 @@ const handleFileSelect = (e: Event) => {
 const startSSE = () => {
   if (eventSource) eventSource.close()
   
-  eventSource = new EventSource('http://localhost:3000/api/events')
+import { API_URL } from '../api/config'
+
+//...
+
+  eventSource = new EventSource(`${API_URL}/events`)
   
   eventSource.addEventListener('PROGRESS', (e) => {
     const data = JSON.parse(e.data)

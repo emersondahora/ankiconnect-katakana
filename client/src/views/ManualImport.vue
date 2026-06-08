@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { API_URL } from "../api/config";
 import DeckSelector from "../components/DeckSelector.vue";
 import { useCache } from "../composables/useCache";
 import { openPreviewModal } from "../composables/usePreviewMode";
@@ -98,7 +99,7 @@ const generateAllEmpty = async () => {
       return;
     }
 
-    const res = await fetch("http://localhost:3000/api/generate/batch", {
+    const res = await fetch(`${API_URL}/generate/batch`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -174,7 +175,7 @@ const submitManual = async (forceUpdate = false) => {
   }
 
   try {
-    const res = await fetch("http://localhost:3000/api/upload/manual", {
+    const res = await fetch(`${API_URL}/upload/manual`, {
       method: "POST",
       body: payload,
     });

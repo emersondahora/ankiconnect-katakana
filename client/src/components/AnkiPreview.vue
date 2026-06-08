@@ -3,6 +3,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { AnkiAPI } from '../api/anki'
 import { Maximize2, X, PanelRightClose, Sun, Moon, Edit } from 'lucide-vue-next'
 import { previewMode, togglePreviewMode, closePreviewModal } from '../composables/usePreviewMode'
+import { API_URL } from '../api/config'
 
 const props = defineProps<{
   fields: Record<string, string>
@@ -63,7 +64,7 @@ const processAudioTags = (html: string) => {
   // Replace [sound:file.mp3]
   let processed = html.replace(/\[sound:(.*?)\]/g, (_match, filename) => {
     return `
-      <div class="audio-btn" onclick="new Audio('http://localhost:3000/api/media/' + encodeURIComponent('${filename}')).play()">
+      <div class="audio-btn" onclick="new Audio('${API_URL}/media/' + encodeURIComponent('${filename}')).play()">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
         <span>Play Audio</span>
       </div>
@@ -73,7 +74,7 @@ const processAudioTags = (html: string) => {
   // Replace local images <img src="filename.jpg"> to point to /api/media/filename.jpg
   processed = processed.replace(/<img([^>]+)src=["']([^"']+)["']([^>]*)>/gi, (match, pre, src, post) => {
     if (src.startsWith('http') || src.startsWith('data:')) return match
-    return `<img${pre}src="http://localhost:3000/api/media/${encodeURIComponent(src)}"${post}>`
+    return `<img${pre}src="${API_URL}/media/${encodeURIComponent(src)}"${post}>`
   })
 
   return processed
@@ -141,7 +142,7 @@ const iframeHtml = computed(() => {
     <html class="${isDarkMode.value ? 'nightMode' : ''}">
     <head>
       <meta charset="utf-8">
-      <base href="http://localhost:3000/api/media/">
+      <base href="${API_URL}/media/">
       <style>
         body { 
           margin: 0; 
