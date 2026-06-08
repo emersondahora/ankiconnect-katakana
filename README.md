@@ -56,6 +56,10 @@ Focado no estudo de palavras em contexto. Ele gera os seguintes cartões:
 - **2. Meaning -> Word:** Traz o significado na frente (juntamente com um botão de áudio opcional), para você tentar lembrar a palavra em japonês.
 - **3. Audio -> Word:** Um cartão focado em *listening*. Toca o áudio na frente e pede que você se lembre da palavra e do seu significado.
 
+### 3. JP::Grammar
+Focado no estudo de pontos gramaticais.
+- **1. Frase -> Análise:** Apresenta a frase com a gramática destacada na frente. No verso, a explicação estruturada, observações, tabelas de análise da frase, dicas e frases de exemplo com tradução em áudio.
+
 ## 📋 Pré-requisitos
 
 Para rodar este projeto, você precisará ter instalado em sua máquina:
@@ -146,3 +150,4 @@ Após o processamento, os resultados serão salvos nas raiz como `imported.csv`,
   - `/src/services`: Regras de negócio (ex: AnkiService, CardCreationService).
 - `/words`: Diretório onde se localizam os arquivos CSV (ex: `w1.csv`) para importação em massa via CLI.
 - `/audio`: Diretório para arquivos de áudio processados.
+- `/docs`: Contém documentações e guias de uso extras (ex: `prompts.md`). [Veja mais dicas de Prompts aqui](./docs/prompts.md)

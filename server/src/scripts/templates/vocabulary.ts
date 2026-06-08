@@ -31,7 +31,7 @@ export const vocabBackTemplate = `
         }, 100);
     </script>
 
-    ${buildListSection('Sentenças', 'SentencesJson', true)}
+    ${buildListSection('Sentenças', 'SentencesJson')}
 </div>
 `;
 

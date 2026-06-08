@@ -16,6 +16,7 @@ import {
 import KanjiForm from "../components/forms/KanjiForm.vue";
 import VocabularyForm from "../components/forms/VocabularyForm.vue";
 import KatakanaForm from "../components/forms/KatakanaForm.vue";
+import GrammarForm from "../components/forms/GrammarForm.vue";
 
 const selectedDeck = useCache("selected-deck", "");
 const selectedModel = useCache("selected-model", "JP::Vocabulary");
@@ -34,6 +35,8 @@ const formData = ref<Record<string, any>>({
   Word: "", _generateImage: false,
   // Katakana
   word: "", meaning: "", image_terms: "", sentences: "",
+  // Grammar
+  Topic: "", Sentence: "", Structure: "", Analysis: "", Observations: "", Examples: "", Hint: "",
 });
 
 const imageFile = ref<File | null>(null);
@@ -42,6 +45,7 @@ const formRef = ref<any>(null); // For calling clearImage on child
 const primaryItem = computed(() => {
   if (selectedModel.value === "JP::Kanji") return formData.value.Kanji;
   if (selectedModel.value === "JP::Vocabulary") return formData.value.Word;
+  if (selectedModel.value === "JP::Grammar") return formData.value.Sentence;
   return formData.value.word;
 });
 
@@ -70,6 +74,15 @@ const generateAllEmpty = async () => {
       if (formData.value.Word) filledFields["Word"] = formData.value.Word;
       
       const keys = ["Meaning", "Sentences"];
+      for (const k of keys) {
+        if (!formData.value[k]) targetFields.push(k);
+        else filledFields[k] = formData.value[k];
+      }
+    } else if (selectedModel.value === "JP::Grammar") {
+      if (formData.value.Sentence) filledFields["Sentence"] = formData.value.Sentence;
+      if (formData.value.Topic) filledFields["Topic"] = formData.value.Topic;
+      
+      const keys = ["Structure", "Analysis", "Observations", "Examples", "Hint"];
       for (const k of keys) {
         if (!formData.value[k]) targetFields.push(k);
         else filledFields[k] = formData.value[k];
@@ -122,6 +135,7 @@ const clearForm = () => {
     Kanji: "", Meaning: "", Onyomi: "", Kunyomi: "", Words: "", Sentences: "",
     Word: "", _generateImage: lastGen,
     word: "", meaning: "", image_terms: "", sentences: "",
+    Topic: "", Sentence: "", Structure: "", Analysis: "", Observations: "", Examples: "", Hint: "",
   };
   imageFile.value = null;
   if (formRef.value && formRef.value.clearImage) {
@@ -148,6 +162,10 @@ const submitManual = async (forceUpdate = false) => {
     ["Kanji", "Meaning", "Onyomi", "Kunyomi", "Words", "Sentences"].forEach((k) => payload.append(k, formData.value[k] || ""));
   } else if (selectedModel.value === "JP::Vocabulary") {
     ["Word", "Meaning", "Sentences"].forEach((k) => payload.append(k, formData.value[k] || ""));
+    payload.append("_generateImage", formData.value._generateImage ? "true" : "false");
+    if (imageFile.value) payload.append("file", imageFile.value);
+  } else if (selectedModel.value === "JP::Grammar") {
+    ["Topic", "Sentence", "Structure", "Analysis", "Observations", "Examples", "Hint"].forEach((k) => payload.append(k, formData.value[k] || ""));
     payload.append("_generateImage", formData.value._generateImage ? "true" : "false");
     if (imageFile.value) payload.append("file", imageFile.value);
   } else {
@@ -222,6 +240,7 @@ const handleError = (msg: string) => {
               <option value="JP::Katakana">JP::Katakana</option>
               <option value="JP::Kanji">JP::Kanji</option>
               <option value="JP::Vocabulary">JP::Vocabulary</option>
+              <option value="JP::Grammar">JP::Grammar</option>
             </select>
           </div>
         </div>
@@ -230,7 +249,8 @@ const handleError = (msg: string) => {
           
           <KanjiForm 
             v-if="selectedModel === 'JP::Kanji'" 
-            v-model="formData" 
+            :modelValue="(formData as any)"
+            @update:modelValue="val => formData = val"
             v-model:maxWordsCount="maxWordsCount"
             v-model:maxSentencesCount="maxSentencesCount"
             :isGeneratingAny="isGeneratingBatch"
@@ -239,7 +259,8 @@ const handleError = (msg: string) => {
 
           <VocabularyForm 
             v-if="selectedModel === 'JP::Vocabulary'" 
-            v-model="formData"
+            :modelValue="(formData as any)"
+            @update:modelValue="val => formData = val"
             v-model:maxSentencesCount="maxSentencesCount"
             :isGeneratingAny="isGeneratingBatch"
             @update:imageFile="(f) => imageFile = f"
@@ -249,10 +270,22 @@ const handleError = (msg: string) => {
 
           <KatakanaForm 
             v-if="selectedModel === 'JP::Katakana'" 
-            v-model="formData"
+            :modelValue="(formData as any)"
+            @update:modelValue="val => formData = val"
             v-model:maxSentencesCount="maxSentencesCount"
             @update:imageFile="(f) => imageFile = f"
             ref="formRef"
+          />
+
+          <GrammarForm 
+            v-if="selectedModel === 'JP::Grammar'" 
+            :modelValue="(formData as any)"
+            @update:modelValue="val => formData = val"
+            v-model:maxSentencesCount="maxSentencesCount"
+            :isGeneratingAny="isGeneratingBatch"
+            @update:imageFile="(f) => imageFile = f"
+            ref="formRef"
+            @error="handleError"
           />
 
           <div class="pt-4 flex items-end justify-end gap-5">

@@ -1,6 +1,6 @@
-import { CSS, kanjiTemplates, vocabTemplates } from './templates/index.js';
+import { CSS, kanjiTemplates, vocabTemplates, grammarTemplates } from './templates/index.js';
 
-async function invoke(action: string, params = {}) {
+export async function invoke(action: string, params = {}) {
     const response = await fetch('http://127.0.0.1:8765', {
         method: 'POST',
         headers: {
@@ -46,6 +46,20 @@ async function updateModels() {
         });
     }
     console.log("JP::Vocabulary updated.");
+
+    console.log("Updating JP::Grammar...");
+    await invoke('updateModelStyling', { model: { name: 'JP::Grammar', css: CSS } });
+    for (const t of grammarTemplates) {
+        await invoke('updateModelTemplates', {
+            model: {
+                name: 'JP::Grammar',
+                templates: {
+                    [t.Name]: { Front: t.Front, Back: t.Back }
+                }
+            }
+        });
+    }
+    console.log("JP::Grammar updated.");
 }
 
 updateModels().catch(console.error);

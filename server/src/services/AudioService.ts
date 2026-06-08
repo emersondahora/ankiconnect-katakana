@@ -20,6 +20,9 @@ export class AudioService {
                 // 2. Base de kanji adjacente: "食[た]べ物[もの]" -> "たべもの"
                 cleanText = cleanText.replace(/([\u4e00-\u9faf\u3400-\u4dbf\u3005]+)\[([^\]]+)\]/g, '$2');
             }
+            
+            // Remove marcadores genéricos (ex: **TEXTO** -> TEXTO)
+            cleanText = cleanText.replace(/\*\*(.*?)\*\*/g, '$1');
 
             const url = gtts.getAudioUrl(cleanText, { lang: 'ja', slow: false });
             // For now we keep the audio folder in the root or relative to CWD

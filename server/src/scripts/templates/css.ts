@@ -3,7 +3,6 @@ export const CSS = `
 .card {
     font-family: 'Inter', 'Noto Sans JP', sans-serif;
     font-size: 20px;
-    text-align: center;
     color: #f8fafc;
     background-color: #0f172a;
     padding: 20px;
@@ -46,6 +45,12 @@ export const CSS = `
     color: #f8fafc;
 }
 
+/* Marker Highlights */
+.marker-highlight {
+    color: #60a5fa;
+    font-weight: bold;
+}
+
 /* Header Grid - 3 Blocks for Kanji */
 .header-container {
     display: flex;
@@ -82,6 +87,15 @@ export const CSS = `
 .vocab-info {
     flex: 2;
     min-width: 0;
+    align-items: center;
+    justify-content: center;
+    display: flex;
+    flex-direction: column;
+
+    background: #1e293b;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);    
 }
 .vocab-image-container {
     flex: 1;
@@ -89,7 +103,7 @@ export const CSS = `
 }
 
 .main-title {
-    font-size: clamp(30px, 4vw + 1rem, 60px);
+    font-size: clamp(30px, 4vw, 60px);
     font-weight: bold;
     text-align: center;
     line-height: 1.2;
@@ -107,6 +121,7 @@ export const CSS = `
     font-size: clamp(20px, 3vw + 0.5rem, 36px);
     color: #cbd5e1;
     margin-bottom: 20px;
+    text-align: center;
 }
 
 /* Illustration tweaks */
@@ -180,7 +195,7 @@ export const CSS = `
     align-items: center;
     text-align: left;
     font-size: 1.2rem;
-    border-bottom: 1px solid #334155;
+    border-bottom: 2px solid #0f172a;
     padding-bottom: 8px;
     margin-bottom: 15px;
     color: #94a3b8;
@@ -203,10 +218,10 @@ export const CSS = `
 .item-list {
     display: flex;
     flex-wrap: wrap;
-    gap: 15px;
+    gap: 4px;
     text-align: left;
     margin-bottom: 30px;
-    justify-content: flex-start;
+    justify-content: center;
 }
 #sentences-container.item-list {
     flex-direction: column;
@@ -249,6 +264,10 @@ export const CSS = `
     margin-bottom: 12px;
     padding-top: 12px;
     border-top: 1px dashed #475569;
+}
+.item-meaning.always-show {
+    display: block;
+    margin-bottom: 0;
 }
 .item-meaning.show {
     display: block;
@@ -349,6 +368,34 @@ export const CSS = `
     color: #0f172a;
 }
 
+/* Grammar Specifics */
+.card-grammar .main-title { 
+    font-size: clamp(24px, 3vw, 30px); 
+}
+.grammar-topic {
+    font-size: clamp(24px, 3vw, 30px)
+    color: #60a5fa;
+    text-align: center;
+    margin-bottom: 15px;
+    font-weight: bold;
+}
+.grammar-structure, .grammar-hint {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    text-align: left;
+    color: #e2e8f0;
+}
+.grammar-structure ul, .grammar-hint ul {
+    margin-top: 8px;
+    padding-left: 20px;
+}
+.grammar-structure li, .grammar-hint li {
+    margin-bottom: 6px;
+}
+.grammar-structure strong, .grammar-hint strong {
+    color: #60a5fa;
+}
+
 .btn-fav-star {
     position: absolute;
     top: 15px;
@@ -439,5 +486,130 @@ rt { font-size: 0.5em; color: #94a3b8; }
     .btn-exp svg, .btn-clr svg {
         margin: 0;
     }
+    .card-grammar .main-title { 
+        font-size: clamp(20px, 3vw, 30px); 
+    }
 }
+
+/* Grammar Specifics */
+.grammar-block {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+.grammar-block-flex {
+    flex: 1;
+    min-width: 300px;
+}
+.grammar-blocks-container {
+    display: flex;
+    gap: 20px;
+    align-items: stretch;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.grammar-title-blue {
+    color: #60a5fa;
+    border-bottom: none;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.grammar-title-yellow {
+    color: #fbbf24;
+    border-bottom: none;
+    margin-bottom: 10px;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+/* Analysis Table */
+.analysis-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+.analysis-table tr {
+    border-bottom: 1px solid #334155;
+}
+.analysis-table tr:last-child {
+    border-bottom: none;
+}
+.analysis-table td {
+    padding: 10px 0;
+    vertical-align: middle;
+}
+.analysis-col-term {
+    font-size: 1.4rem;
+    color: #f8fafc;
+    width: 40%;
+    text-align: left;
+}
+.analysis-col-meaning {
+    font-size: 1.1rem;
+    color: #cbd5e1;
+    width: 60%;
+    text-align: right;
+}
+.analysis-col-term .furigana-container ruby rt {
+    font-size: 0.6em;
+    color: #94a3b8;
+}
+
+/* Hover e cabeçalho na tabela */
+.analysis-table th {
+    text-align: left;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    font-weight: normal;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #334155;
+}
+.analysis-table th:last-child {
+    text-align: right;
+}
+.analysis-table tbody tr {
+    transition: background-color 0.2s;
+}
+.analysis-table tbody tr:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Blocos de Observações */
+.grammar-observations ul {
+    list-style-type: disc;
+    padding-left: 20px;
+    margin: 10px 0;
+}
+.grammar-observations li {
+    margin-bottom: 5px;
+    color: #cbd5e1;
+}
+.grammar-observations p:last-child {
+    margin-bottom: 0;
+}
+
+/* Sub-blocos (Novo Padrão) */
+.obs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+.obs-subblock {
+    background: #0f172a;
+    border: 1px solid #334155;
+    border-radius: 8px;
+    padding: 15px 20px;
+    color: #e2e8f0;
+}
+.obs-subblock > :first-child {
+    margin-top: 0;
+}
+
+.obs-subblock > :last-child {
+    margin-bottom: 0;
+}
+</style>
 `;

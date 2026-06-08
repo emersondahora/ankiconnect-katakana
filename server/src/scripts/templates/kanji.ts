@@ -35,8 +35,8 @@ export const kanjiBackTemplate = `
     ${SHARED_SCRIPT}
     ${SVGBase64DecoderScript}
 
-    ${buildListSection('Palavras', 'WordsJson', false)}
-    ${buildListSection('Sentenças', 'SentencesJson', true)}
+    ${buildListSection('Palavras', 'WordsJson')}
+    ${buildListSection('Sentenças', 'SentencesJson')}
 </div>
 `;
 

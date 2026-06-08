@@ -99,7 +99,7 @@ export class AnkiService {
             for (const [k, v] of Object.entries(n.fields)) {
                 fields[k] = (v as any).value;
             }
-            const primaryKey = n.fields.Word?.value || n.fields.Kanji?.value;
+            const primaryKey = n.fields.Word?.value || n.fields.Kanji?.value || n.fields.Topic?.value || n.fields.Sentence?.value;
             if (primaryKey) {
                 map.set(primaryKey, { noteId: n.noteId, fields });
             }

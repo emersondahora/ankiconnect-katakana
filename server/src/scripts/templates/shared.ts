@@ -32,15 +32,22 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
         clear: \`${SVGS.clear}\`
     };
 
+    window.parseMarkers = function(text) {
+        if (!text) return '';
+        return text.replace(/\\*\\*(.*?)\\*\\*/g, '<span class="marker-highlight">$1</span>');
+    };
+
     window.parseFurigana = function(text, showFurigana) {
         if (!text) return '';
-        const html = text.replace(/([一-龯A-Za-z0-9_]+)\\[([^\\]]+)\\]/g, '<ruby>$1<rt>$2</rt></ruby>');
+        let html = text.replace(/([一-龯A-Za-z0-9_]+)\\[([^\\]]+)\\]/g, '<ruby>$1<rt>$2</rt></ruby>');
+        html = window.parseMarkers(html);
         return \`<span class="furigana-container \${showFurigana ? '' : 'hide-furigana'}">\${html}</span>\`;
     };
 
     window.cleanFurigana = function(text) {
         if (!text) return '';
-        return text.replace(/([一-龯A-Za-z0-9_]+)\\[([^\\]]+)\\]/g, '$1');
+        let cleaned = text.replace(/([一-龯A-Za-z0-9_]+)\\[([^\\]]+)\\]/g, '$1');
+        return cleaned.replace(/\\*\\*(.*?)\\*\\*/g, '$1');
     };
 
     // --- Audio Logic ---
@@ -230,11 +237,12 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
     };
 
     window.openGPT = function(term) {
-        window.open('https://chatgpt.com/?q=Me+explique:+' + encodeURIComponent(window.cleanFurigana(term)), '_blank');
+        const prompt = 'Me explique:' + window.cleanFurigana(term) + '. \\n Inclua furigana nos kanjis.';
+        window.open('https://chatgpt.com/?q=' + encodeURIComponent(prompt), '_blank');
     };
 
     // --- List Rendering ---
-    window.renderList = function(containerId, jsonString, isSentence = false) {
+    window.renderList = function(containerId, jsonString, isAnalysis = false) {
         const container = document.getElementById(containerId);
         if (!container || !jsonString) return;
 
@@ -266,7 +274,7 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
                 card.appendChild(textDiv);
 
                 const meaningDiv = document.createElement('div');
-                meaningDiv.className = 'item-meaning';
+                meaningDiv.className = 'item-meaning' + (isAnalysis ? ' always-show' : '');
                 meaningDiv.innerText = item.meaning || '';
                 card.appendChild(meaningDiv);
 
@@ -285,7 +293,7 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
                 };
                 actionsDiv.appendChild(btnFurigana);
 
-                if (item.meaning) {
+                if (item.meaning && !isAnalysis) {
                     const btnTranslate = document.createElement('button');
                     btnTranslate.className = 'btn-action small';
                     btnTranslate.innerHTML = window.SVGS.translate;
@@ -297,7 +305,7 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
                     actionsDiv.appendChild(btnTranslate);
                 }
 
-                if (item.audio) {
+                if (item.audio && !isAnalysis) {
                     const btnAudio = document.createElement('button');
                     btnAudio.className = 'btn-action small';
                     btnAudio.innerHTML = window.SVGS.audio;
@@ -344,6 +352,30 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
             });
         } catch (e) {
             console.error("Erro ao fazer parse do JSON", e);
+        }
+    };
+
+    window.renderAnalysisTable = function(containerId, jsonString) {
+        try {
+            if (!jsonString) return;
+            const items = JSON.parse(jsonString);
+            if (!items.length) return;
+            
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            
+            container.innerHTML = '<table class="analysis-table">' +
+                '<thead><tr><th>Termo</th><th>Tradução</th></tr></thead>' +
+                '<tbody>' + items.map(item => {
+                const textHtml = window.parseFurigana(item.text, true);
+                const translationHtml = item.meaning ? item.meaning : '';
+                return '<tr>' +
+                       '<td class="analysis-col-term">' + textHtml + '</td>' +
+                       '<td class="analysis-col-meaning">' + translationHtml + '</td>' +
+                       '</tr>';
+            }).join('') + '</tbody></table>';
+        } catch (e) {
+            console.error('Analysis table render error:', e);
         }
     };
 
@@ -445,7 +477,7 @@ export const SVGBase64DecoderScript = `
 </script>
 `;
 
-export function buildListSection(title: string, fieldName: string, isSentence: boolean = false) {
+export function buildListSection(title: string, fieldName: string, isAnalysis: boolean = false) {
     return `
 {{#${fieldName}}}
 <div class="section-title">
@@ -457,7 +489,7 @@ export function buildListSection(title: string, fieldName: string, isSentence: b
 <script>
     setTimeout(() => {
         const dataEl = document.getElementById('${fieldName}-data');
-        if (dataEl) window.renderList('${fieldName}-container', dataEl.innerText, ${isSentence});
+        if (dataEl) window.renderList('${fieldName}-container', dataEl.innerText, ${isAnalysis});
         window.initFavoritesControls();
     }, 100);
 </script>

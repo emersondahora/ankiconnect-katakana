@@ -2,6 +2,7 @@ import { BaseCardService } from './cards/BaseCardService.js';
 import { KatakanaCardService } from './cards/KatakanaCardService.js';
 import { KanjiCardService } from './cards/KanjiCardService.js';
 import { VocabularyCardService } from './cards/VocabularyCardService.js';
+import { GrammarCardService } from './cards/GrammarCardService.js';
 
 export class CardCreationService {
     static getService(modelName: string): BaseCardService {
@@ -10,6 +11,8 @@ export class CardCreationService {
                 return new KanjiCardService();
             case 'JP::Vocabulary':
                 return new VocabularyCardService();
+            case 'JP::Grammar':
+                return new GrammarCardService();
             case 'JP::Katakana':
             default:
                 return new KatakanaCardService();

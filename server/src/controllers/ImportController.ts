@@ -47,7 +47,7 @@ router.post('/upload/manual', upload.single('file'), async (req, res) => {
         }
         item._isManualImport = true;
         
-        const primaryKey = item.Word || item.word || item.Kanji || item.kanji;
+        const primaryKey = item.Word || item.word || item.Kanji || item.kanji || item.Topic || item.Sentence;
         const forceUpdate = req.body.forceUpdate === 'true';
         
         if (primaryKey && !forceUpdate) {
@@ -96,7 +96,7 @@ async function processBatch(words: any[], deck: string, modelName: string) {
 
         const promises = words.map(async (item, index) => {
             const current = index + 1;
-            const primaryKey = item.word || item.Word || item.Kanji || item.kanji || `unknown_${index}`;
+            const primaryKey = item.word || item.Word || item.Kanji || item.kanji || item.Topic || item.Sentence || `unknown_${index}`;
             
             if (existingWordsMap.has(primaryKey)) {
                 completed++;
