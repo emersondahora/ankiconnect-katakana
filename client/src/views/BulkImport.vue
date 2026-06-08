@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onUnmounted, onMounted, computed, watch } from 'vue'
+import { API_URL } from '../api/config'
 import { ImportAPI } from '../api/import'
 import { ImagesAPI } from '../api/images'
 import { UploadCloud, FileType, CheckCircle, XCircle, AlertCircle, RefreshCw, Clock, Bell } from 'lucide-vue-next'
@@ -112,10 +113,6 @@ const handleFileSelect = (e: Event) => {
 const startSSE = () => {
   if (eventSource) eventSource.close()
   
-import { API_URL } from '../api/config'
-
-//...
-
   eventSource = new EventSource(`${API_URL}/events`)
   
   eventSource.addEventListener('PROGRESS', (e) => {
