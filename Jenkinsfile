@@ -6,7 +6,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
         
         // Substitua pelo seu nome de usuário do Docker Hub
-        DOCKER_USERNAME = 'emersondahora'
+        DOCKER_USERNAME = 'seu_usuario_dockerhub'
         
         // Nomes das imagens
         CLIENT_IMAGE = "${DOCKER_USERNAME}/ankiconnect-katakana-client"
@@ -24,30 +24,10 @@ pipeline {
             }
         }
 
-        stage('Build Client') {
-            steps {
-                dir('client') {
-                    // Instala dependências e compila o Vue3 para produção
-                    // Assumindo que o output vai para a pasta 'dist'
-                    sh 'npm ci || npm install'
-                    sh 'npm run build'
-                }
-            }
-        }
-
-        stage('Build Server') {
-            steps {
-                dir('server') {
-                    // Instala dependências do backend
-                    sh 'npm ci || npm install'
-                }
-            }
-        }
-
         stage('Dockerize Client') {
             steps {
                 dir('client') {
-                    // O Dockerfile copiará a pasta 'dist' recém-criada
+                    // O Dockerfile agora tem multi-stage build e rodará o npm install/build lá dentro!
                     sh "docker build -t ${CLIENT_IMAGE}:${TAG} -t ${CLIENT_IMAGE}:latest ."
                 }
             }
@@ -56,7 +36,7 @@ pipeline {
         stage('Dockerize Server') {
             steps {
                 dir('server') {
-                    // O Dockerfile empacotará o código do node
+                    // O Dockerfile do server já instala as dependências lá dentro
                     sh "docker build -t ${SERVER_IMAGE}:${TAG} -t ${SERVER_IMAGE}:latest ."
                 }
             }
