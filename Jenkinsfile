@@ -43,28 +43,29 @@ pipeline {
         }
 
         stage('Push to Docker Hub') {
+            environment {
+                // A sintaxe nativa do Pipeline Declarativo. 
+                // O Jenkins automaticamente cria DOCKER_CREDS_USR e DOCKER_CREDS_PSW.
+                DOCKER_CREDS = credentials('dockerhub-credentials')
+            }
             steps {
-                echo ">>> 1. INICIANDO O STAGE PUSH"
+                echo ">>> 1. INICIANDO O STAGE PUSH (Credenciais injetadas)"
                 
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    echo ">>> 2. CREDENCIAIS CARREGADAS COM SUCESSO"
-                    
-                    sh '''
-                        echo ">>> 3. INICIANDO SHELL PARA DOCKER LOGIN"
-                        docker login -u "$DOCKER_USER" -p "$DOCKER_PASS" || echo "FALHOU O LOGIN"
-                    '''
-                    
-                    echo ">>> 4. LOGIN FINALIZADO. INICIANDO PUSH DO CLIENT..."
-                    sh "docker push ${CLIENT_IMAGE}:${TAG} || echo 'FALHOU PUSH CLIENT'"
-                    sh "docker push ${CLIENT_IMAGE}:latest || echo 'FALHOU PUSH CLIENT LATEST'"
-                    
-                    echo ">>> 5. INICIANDO PUSH DO SERVER..."
-                    sh "docker push ${SERVER_IMAGE}:${TAG} || echo 'FALHOU PUSH SERVER'"
-                    sh "docker push ${SERVER_IMAGE}:latest || echo 'FALHOU PUSH SERVER LATEST'"
-                    
-                    sh 'docker logout'
-                    echo ">>> 6. FIM DO PUSH"
-                }
+                sh '''
+                    echo ">>> 2. INICIANDO DOCKER LOGIN"
+                    docker login -u "$DOCKER_CREDS_USR" -p "$DOCKER_CREDS_PSW"
+                '''
+                
+                echo ">>> 3. INICIANDO PUSH DO CLIENT..."
+                sh "docker push ${CLIENT_IMAGE}:${TAG}"
+                sh "docker push ${CLIENT_IMAGE}:latest"
+                
+                echo ">>> 4. INICIANDO PUSH DO SERVER..."
+                sh "docker push ${SERVER_IMAGE}:${TAG}"
+                sh "docker push ${SERVER_IMAGE}:latest"
+                
+                sh 'docker logout'
+                echo ">>> 5. FIM DO PUSH"
             }
         }
     }
