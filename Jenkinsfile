@@ -6,7 +6,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
         
         // Substitua pelo seu nome de usuário do Docker Hub
-        DOCKER_USERNAME = 'emersondahora@gmail.com'
+        DOCKER_USERNAME = 'emersondahora'
         
         // Nomes das imagens
         CLIENT_IMAGE = "${DOCKER_USERNAME}/ankiconnect-katakana-client"
