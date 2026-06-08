@@ -24,6 +24,9 @@ RUN rm -rf /usr/share/nginx/html/*
 # Copia a pasta 'dist' gerada no Estágio 1 para o Nginx
 COPY --from=builder /app/dist /usr/share/nginx/html/
 
+# Copia a configuração personalizada do Nginx para suportar o Vue Router (SPA)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 # Adiciona o script de injeção de variáveis de ambiente no tempo de execução
 COPY generate-config.sh /docker-entrypoint.d/40-generate-config.sh
 RUN chmod +x /docker-entrypoint.d/40-generate-config.sh
