@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Sparkles, Loader2 } from 'lucide-vue-next';
-import { API_URL } from "../../api/config";
+import { apiClient } from "../../api/client";
 
 const props = defineProps<{
     modelValue: string;
@@ -29,21 +29,16 @@ const generate = async () => {
     
     isGenerating.value = true;
     try {
-        const res = await fetch(`${API_URL}/generate`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                type: props.promptType,
-                item: props.dependsOn,
-                maxCount: props.maxCount
-            }),
+        const res = await apiClient.post("/generate", {
+            type: props.promptType,
+            item: props.dependsOn,
+            maxCount: props.maxCount
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error || "Erro ao gerar campo");
-
-        emit('update:modelValue', data.result);
+        
+        emit('update:modelValue', res.data.result);
     } catch (err: any) {
-        emit('error', err.message);
+        const msg = err.response?.data?.error || err.message || "Erro ao gerar campo";
+        emit('error', msg);
     } finally {
         isGenerating.value = false;
     }

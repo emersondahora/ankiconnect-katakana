@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { API_URL } from "../api/config";
+import { apiClient } from "../api/client";
 import DeckSelector from "../components/DeckSelector.vue";
 import { useCache } from "../composables/useCache";
 import { openPreviewModal } from "../composables/usePreviewMode";
@@ -99,19 +99,15 @@ const generateAllEmpty = async () => {
       return;
     }
 
-    const res = await fetch(`${API_URL}/generate/batch`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        modelName: selectedModel.value,
-        filledFields,
-        targetFields,
-        maxWords: maxWordsCount.value,
-        maxSentences: maxSentencesCount.value
-      }),
+    const res = await apiClient.post("/generate/batch", {
+      modelName: selectedModel.value,
+      filledFields,
+      targetFields,
+      maxWords: maxWordsCount.value,
+      maxSentences: maxSentencesCount.value
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Erro ao gerar em lote");
+    
+    const data = res.data;
 
     // Preenche as propriedades retornadas
     if (data.result) {
@@ -124,7 +120,8 @@ const generateAllEmpty = async () => {
     setTimeout(() => { statusMessage.value = null; }, 3000);
 
   } catch (err: any) {
-    statusMessage.value = { type: "error", text: err.message };
+    const msg = err.response?.data?.error || err.message || "Erro ao gerar em lote";
+    statusMessage.value = { type: "error", text: msg };
   } finally {
     isGeneratingBatch.value = false;
   }
@@ -175,28 +172,27 @@ const submitManual = async (forceUpdate = false) => {
   }
 
   try {
-    const res = await fetch(`${API_URL}/upload/manual`, {
-      method: "POST",
-      body: payload,
-    });
-    const data = await res.json();
-
-    if (res.status === 409) {
-      isSubmitting.value = false;
-      if (confirm("Essa nota já existe. Deseja atualizar os dados existentes com os novos valores?")) {
-        await submitManual(true);
+    const res = await apiClient.post("/upload/manual", payload, {
+      headers: {
+        "Content-Type": "multipart/form-data"
       }
-      return;
-    }
-
-    if (!res.ok) throw new Error(data.error || "Erro ao importar");
+    });
+    const data = res.data;
 
     statusMessage.value = { type: "success", text: `Nota importada com sucesso no deck '${selectedDeck.value}'!` };
     if (data.fields) {
       openPreviewModal(data.fields, selectedModel.value, true);
     }
   } catch (err: any) {
-    statusMessage.value = { type: "error", text: err.message };
+    if (err.response?.status === 409) {
+      isSubmitting.value = false;
+      if (confirm("Essa nota já existe. Deseja atualizar os dados existentes com os novos valores?")) {
+        await submitManual(true);
+      }
+      return;
+    }
+    const msg = err.response?.data?.error || err.message || "Erro ao importar";
+    statusMessage.value = { type: "error", text: msg };
   } finally {
     isSubmitting.value = false;
   }
