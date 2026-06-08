@@ -1,20 +1,35 @@
-FROM node:20-alpine
+# ESTÁGIO 1: Build da Aplicação
+FROM node:20-alpine AS builder
 
-# Define o diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia os arquivos de configuração do npm
+# Copia os arquivos de configuração
 COPY package*.json ./
+COPY tsconfig*.json ./
 
-# Instala SOMENTE as dependências de produção para reduzir a imagem
-RUN npm ci --only=production || npm install --omit=dev
+# Instala TODAS as dependências (incluindo devDependencies como typescript)
+RUN npm ci || npm install
 
-# Copia o restante do código da aplicação
-# A pasta node_modules local não será copiada devido ao .dockerignore
+# Copia todo o código fonte
 COPY . .
 
-# A porta padrão que o seu server Node geralmente expõe. Ajuste se necessário.
+# Executa o build (compila o TypeScript para a pasta dist)
+RUN npm run build
+
+# ESTÁGIO 2: Imagem de Produção (leve e segura)
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copia as definições do npm para instalar APENAS as dependências de produção
+COPY package*.json ./
+RUN npm ci --only=production || npm install --omit=dev
+
+# Copia apenas o código compilado do estágio anterior
+COPY --from=builder /app/dist ./dist
+
+# A porta padrão que o seu server Node expõe
 EXPOSE 3000
 
-# Executa o servidor node (altere index.js se o seu ponto de entrada for outro, ex: server.js)
-CMD ["node", "index.js"]
+# Executa o servidor node rodando o código já compilado para JavaScript puro!
+CMD ["node", "dist/api.js"]

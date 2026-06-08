@@ -5,8 +5,9 @@
   "main": "src/cli.ts",
   "type": "module",
   "scripts": {
-    "start": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
     "dev": "tsx watch src/api.ts",
+    "build": "tsc",
     "migrate": "tsx src/migrations/runMigrations.ts"
   },
   "dependencies": {
