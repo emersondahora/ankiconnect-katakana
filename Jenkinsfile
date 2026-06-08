@@ -44,20 +44,26 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
+                echo ">>> 1. INICIANDO O STAGE PUSH"
+                
                 withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    // Executa o login seguro (Jenkins oculta a senha automaticamente)
-                    sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                    echo ">>> 2. CREDENCIAIS CARREGADAS COM SUCESSO"
                     
-                    // Push do Client
-                    sh "docker push ${CLIENT_IMAGE}:${TAG}"
-                    sh "docker push ${CLIENT_IMAGE}:latest"
+                    sh '''
+                        echo ">>> 3. INICIANDO SHELL PARA DOCKER LOGIN"
+                        docker login -u "$DOCKER_USER" -p "$DOCKER_PASS" || echo "FALHOU O LOGIN"
+                    '''
                     
-                    // Push do Server
-                    sh "docker push ${SERVER_IMAGE}:${TAG}"
-                    sh "docker push ${SERVER_IMAGE}:latest"
+                    echo ">>> 4. LOGIN FINALIZADO. INICIANDO PUSH DO CLIENT..."
+                    sh "docker push ${CLIENT_IMAGE}:${TAG} || echo 'FALHOU PUSH CLIENT'"
+                    sh "docker push ${CLIENT_IMAGE}:latest || echo 'FALHOU PUSH CLIENT LATEST'"
                     
-                    // Desloga
+                    echo ">>> 5. INICIANDO PUSH DO SERVER..."
+                    sh "docker push ${SERVER_IMAGE}:${TAG} || echo 'FALHOU PUSH SERVER'"
+                    sh "docker push ${SERVER_IMAGE}:latest || echo 'FALHOU PUSH SERVER LATEST'"
+                    
                     sh 'docker logout'
+                    echo ">>> 6. FIM DO PUSH"
                 }
             }
         }
