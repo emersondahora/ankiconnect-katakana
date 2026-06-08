@@ -6,7 +6,7 @@ pipeline {
         DOCKERHUB_CREDENTIALS = 'dockerhub-credentials'
         
         // Substitua pelo seu nome de usuário do Docker Hub
-        DOCKER_USERNAME = 'seu_usuario_dockerhub'
+        DOCKER_USERNAME = 'emersondahora'
         
         // Nomes das imagens
         CLIENT_IMAGE = "${DOCKER_USERNAME}/ankiconnect-katakana-client"
@@ -46,18 +46,21 @@ pipeline {
             steps {
                 // Utiliza a credencial do Jenkins para fazer login no Docker Hub de forma segura
                 withCredentials([usernamePassword(credentialsId: "${DOCKERHUB_CREDENTIALS}", usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-                    sh 'echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin'
-                    
-                    // Client Push
-                    sh "docker push ${CLIENT_IMAGE}:${TAG}"
-                    sh "docker push ${CLIENT_IMAGE}:latest"
-                    
-                    // Server Push
-                    sh "docker push ${SERVER_IMAGE}:${TAG}"
-                    sh "docker push ${SERVER_IMAGE}:latest"
-                    
-                    // Logout por segurança
-                    sh 'docker logout'
+                    sh '''
+                        # Tenta fazer o login e exibe a mensagem de sucesso ou falha
+                        docker login -u "$DOCKER_USER" -p "$DOCKER_PASS"
+                        
+                        # Client Push
+                        docker push ${CLIENT_IMAGE}:${TAG}
+                        docker push ${CLIENT_IMAGE}:latest
+                        
+                        # Server Push
+                        docker push ${SERVER_IMAGE}:${TAG}
+                        docker push ${SERVER_IMAGE}:latest
+                        
+                        # Logout por segurança
+                        docker logout
+                    '''
                 }
             }
         }
