@@ -44,28 +44,20 @@ pipeline {
 
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    echo "Iniciando Push usando o plugin nativo do Docker..."
-                    try {
-                        // Usa a função nativa do Jenkins que gerencia a autenticação com segurança
-                        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub-credentials') {
-                            
-                            // Client
-                            def clientImg = docker.image("${CLIENT_IMAGE}:${TAG}")
-                            clientImg.push()
-                            clientImg.push('latest')
-                            
-                            // Server
-                            def serverImg = docker.image("${SERVER_IMAGE}:${TAG}")
-                            serverImg.push()
-                            serverImg.push('latest')
-                            
-                        }
-                    } catch (Exception e) {
-                        echo "===== OCORREU UM ERRO DURANTE O PUSH ====="
-                        echo e.toString()
-                        throw e
-                    }
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-credentials', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    // Executa o login seguro (Jenkins oculta a senha automaticamente)
+                    sh 'docker login -u $DOCKER_USER -p $DOCKER_PASS'
+                    
+                    // Push do Client
+                    sh "docker push ${CLIENT_IMAGE}:${TAG}"
+                    sh "docker push ${CLIENT_IMAGE}:latest"
+                    
+                    // Push do Server
+                    sh "docker push ${SERVER_IMAGE}:${TAG}"
+                    sh "docker push ${SERVER_IMAGE}:latest"
+                    
+                    // Desloga
+                    sh 'docker logout'
                 }
             }
         }
