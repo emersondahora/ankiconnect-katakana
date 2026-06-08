@@ -6,9 +6,13 @@ const router = Router();
 
 router.get('/status', async (req, res) => {
     try {
-        await AnkiService.createDeck(config.ANKI_DECK); 
+        // Ping rápido sem causar efeitos colaterais no Anki
+        await AnkiService.invoke('version', {}, 0, 2000);
+        
+        // Retorna sucesso sem criar nada no Anki
         res.json({ ankiOnline: true, deck: config.ANKI_DECK });
     } catch (e) {
+        // Cai aqui rapidamente caso dê timeout ou o Anki esteja fechado
         res.json({ ankiOnline: false });
     }
 });

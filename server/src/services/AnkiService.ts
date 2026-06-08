@@ -9,13 +9,13 @@ import { sleep } from '../utils/helpers.js';
 import { AnkiConnectionError } from '../errors/CustomErrors.js';
 
 export class AnkiService {
-    static async invoke(action: string, params: Record<string, any> = {}, retries = 3): Promise<any> {
+    static async invoke(action: string, params: Record<string, any> = {}, retries = 3, timeoutMs = 30000): Promise<any> {
         return ankiLimit(async () => {
             const execute = async (attemptsLeft: number): Promise<any> => {
                 const body = { action, version: 6, params };
                 const url = config.ANKI_URL.replace('localhost', '127.0.0.1');
                 try {
-                    const response = await axios.post(url, body);
+                    const response = await axios.post(url, body, { timeout: timeoutMs });
                     if (response.data.error) throw new Error(response.data.error);
                     return response.data.result;
                 } catch (error: any) {
