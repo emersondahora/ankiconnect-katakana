@@ -13,6 +13,12 @@ declare global {
 }
 
 export const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+    // Permitir acesso público aos arquivos de mídia (áudio/imagem) para que o navegador não bloqueie (ORB)
+    if (req.method === 'GET' && req.originalUrl.startsWith('/api/media/')) {
+        next();
+        return;
+    }
+
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
