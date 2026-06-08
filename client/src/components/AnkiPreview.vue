@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, computed } from 'vue'
 import { AnkiAPI } from '../api/anki'
-import { Maximize2, Minimize2, X, PanelRightClose, Sun, Moon, Edit } from 'lucide-vue-next'
+import { Maximize2, X, PanelRightClose, Sun, Moon, Edit } from 'lucide-vue-next'
 import { previewMode, togglePreviewMode, closePreviewModal } from '../composables/usePreviewMode'
 
 const props = defineProps<{
@@ -38,7 +38,7 @@ watch(activeTemplateName, () => {
 const fetchTemplates = async () => {
   isLoading.value = true
   try {
-    const res = await AnkiAPI.getTemplates(props.modelName)
+    const res = await AnkiAPI.getTemplates(props.modelName || '')
     templates.value = res.data.templates
     if (Object.keys(templates.value).length > 0) {
       activeTemplateName.value = Object.keys(templates.value)[0]
@@ -61,7 +61,7 @@ onMounted(() => {
 
 const processAudioTags = (html: string) => {
   // Replace [sound:file.mp3]
-  let processed = html.replace(/\[sound:(.*?)\]/g, (match, filename) => {
+  let processed = html.replace(/\[sound:(.*?)\]/g, (_match, filename) => {
     return `
       <div class="audio-btn" onclick="new Audio('http://localhost:3000/api/media/' + encodeURIComponent('${filename}')).play()">
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
