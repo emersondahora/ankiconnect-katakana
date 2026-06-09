@@ -71,7 +71,8 @@ const filteredNotes = computed(() => {
 })
 
 const handleNoteClick = (note: any) => {
-  openPreviewModal(note.fields, note.modelName)
+  const isLgScreen = window.innerWidth >= 1024
+  openPreviewModal(note.fields, note.modelName, !isLgScreen)
 }
 
 const openEditor = (note: any) => {
