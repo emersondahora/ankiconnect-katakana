@@ -53,6 +53,7 @@ async function fixTemplateScripts(modelName: string) {
 async function run() {
     await fixTemplateScripts('JP::Kanji');
     await fixTemplateScripts('JP::Vocabulary');
+    await fixTemplateScripts('JP::Grammar');
 }
 
 run().catch(console.error);

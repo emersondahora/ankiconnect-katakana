@@ -59,7 +59,7 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
         localStorage.setItem(CONFIG.speedKey, speed.toString());
         // Update all speed toggle buttons visually
         document.querySelectorAll('.btn-speed').forEach(btn => {
-            btn.innerHTML = '<span class="hide-mobile">Speed </span>' + speed + 'x';
+            btn.innerHTML = speed + 'x';
         });
     };
 
@@ -113,7 +113,7 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
             }
             e.preventDefault(); 
         };
-        btn.innerHTML = '<span class="hide-mobile">Speed </span>' + window.getCurrentAudioSpeed() + 'x';
+        btn.innerHTML = window.getCurrentAudioSpeed() + 'x';
     };
 
     window.renderAudioControls = function(audioStr, containerId, autoPlayIfEnabled = false) {
@@ -380,29 +380,50 @@ if (typeof window.AnkiSharedSetup === 'undefined') {
     };
 
     window.initFavoritesControls = function() {
-        const containers = document.querySelectorAll('.section-actions');
-        containers.forEach(container => {
-            if (container.querySelector('.btn-exp')) return; // Already init
-            
-            const btnExp = document.createElement('button');
-            btnExp.className = 'btn-action btn-exp';
-            btnExp.innerHTML = window.SVGS.export + '<span style="margin-left: 4px;" class="hide-mobile">WhatsApp</span>';
-            btnExp.onclick = window.exportFavorites;
-            
-            const btnClr = document.createElement('button');
-            btnClr.className = 'btn-action btn-clr';
-            btnClr.innerHTML = window.SVGS.clear + '<span style="margin-left: 4px;" class="hide-mobile">Limpar</span>';
-            btnClr.onclick = window.clearFavorites;
-            
-            const btnSpeed = document.createElement('button');
-            btnSpeed.className = 'btn-action btn-speed';
-            btnSpeed.style.whiteSpace = 'nowrap';
-            window.setupSpeedButtonEvents(btnSpeed);
+        if (document.getElementById('global-actions-menu')) return; // Already init
+        
+        const container = document.createElement('div');
+        container.id = 'global-actions-menu';
+        container.className = 'global-actions-menu';
+        
+        const optionsDiv = document.createElement('div');
+        optionsDiv.className = 'global-options';
+        optionsDiv.style.display = 'none';
+        
+        const btnExp = document.createElement('button');
+        btnExp.className = 'btn-action btn-exp';
+        btnExp.title = 'Exportar para WhatsApp';
+        btnExp.innerHTML = window.SVGS.export;
+        btnExp.onclick = window.exportFavorites;
+        
+        const btnClr = document.createElement('button');
+        btnClr.className = 'btn-action btn-clr';
+        btnClr.title = 'Limpar Favoritos';
+        btnClr.innerHTML = window.SVGS.clear;
+        btnClr.onclick = window.clearFavorites;
+        
+        const btnSpeed = document.createElement('button');
+        btnSpeed.className = 'btn-action btn-speed';
+        btnSpeed.title = 'Velocidade de Áudio';
+        btnSpeed.style.whiteSpace = 'nowrap';
+        window.setupSpeedButtonEvents(btnSpeed);
 
-            container.appendChild(btnExp);
-            container.appendChild(btnClr);
-            container.appendChild(btnSpeed);
-        });
+        optionsDiv.appendChild(btnExp);
+        optionsDiv.appendChild(btnClr);
+        optionsDiv.appendChild(btnSpeed);
+        
+        const btnToggle = document.createElement('button');
+        btnToggle.className = 'btn-action btn-toggle';
+        btnToggle.title = 'Opções';
+        btnToggle.innerHTML = window.SVGS.expand;
+        btnToggle.onclick = () => {
+            optionsDiv.style.display = optionsDiv.style.display === 'none' ? 'flex' : 'none';
+        };
+
+        container.appendChild(optionsDiv);
+        container.appendChild(btnToggle);
+        
+        document.body.appendChild(container);
     };
 }
 </script>
@@ -482,14 +503,13 @@ export function buildListSection(title: string, fieldName: string, isAnalysis: b
 {{#${fieldName}}}
 <div class="section-title">
     <span>${title}</span>
-    <div class="section-actions" id="actions-${fieldName}"></div>
 </div>
 <div id="${fieldName}-container" class="item-list"></div>
 <div id="${fieldName}-data" style="display: none;">{{${fieldName}}}</div>
 <script>
     setTimeout(() => {
         const dataEl = document.getElementById('${fieldName}-data');
-        if (dataEl) window.renderList('${fieldName}-container', dataEl.innerText, ${isAnalysis});
+        if (dataEl) window.renderList('${fieldName}-container', dataEl.innerHTML, ${isAnalysis});
         window.initFavoritesControls();
     }, 100);
 </script>

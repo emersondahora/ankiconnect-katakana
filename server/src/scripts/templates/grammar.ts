@@ -4,7 +4,8 @@ import { SVGS } from './icons.js';
 export const grammarBackTemplate = `
 <div class="card-wrapper card-grammar">
     {{#Topic}}
-    <div class="grammar-topic">{{Topic}}</div>
+    <div class="grammar-topic" id="grammar-topic-back"></div>
+    <div id="grammar-topic-data-back" style="display: none;">{{Topic}}</div>
     {{/Topic}}
 
     <div class="header-container vocab-header" style="margin-bottom: 30px;">
@@ -38,7 +39,31 @@ export const grammarBackTemplate = `
             const sentenceEl = document.getElementById('grammar-sentence-back');
             const sentenceData = document.getElementById('grammar-sentence-data-back');
             if (sentenceEl && sentenceData) {
-                sentenceEl.innerHTML = window.parseFurigana(sentenceData.innerText, true);
+                sentenceEl.innerHTML = window.parseFurigana(sentenceData.innerHTML, true);
+            }
+
+            const topicEl = document.getElementById('grammar-topic-back');
+            const topicData = document.getElementById('grammar-topic-data-back');
+            if (topicEl && topicData) {
+                topicEl.innerHTML = window.parseFurigana(topicData.innerHTML, true);
+            }
+
+            const structureEl = document.getElementById('grammar-structure-back');
+            const structureData = document.getElementById('grammar-structure-data-back');
+            if (structureEl && structureData) {
+                structureEl.innerHTML = window.parseFurigana(structureData.innerHTML, true);
+            }
+
+            const obsEl = document.getElementById('grammar-observations-back');
+            const obsData = document.getElementById('grammar-observations-data-back');
+            if (obsEl && obsData) {
+                obsEl.innerHTML = window.parseFurigana(obsData.innerHTML, true);
+            }
+
+            const hintEl = document.getElementById('grammar-hint-back');
+            const hintData = document.getElementById('grammar-hint-data-back');
+            if (hintEl && hintData) {
+                hintEl.innerHTML = window.parseFurigana(hintData.innerHTML, true);
             }
         }, 100);
     </script>
@@ -47,7 +72,8 @@ export const grammarBackTemplate = `
         {{#Structure}}
         <div class="grammar-block grammar-block-flex">
             <div class="section-title grammar-title-blue">Estrutura</div>
-            <div class="grammar-structure">{{Structure}}</div>
+            <div class="grammar-structure" id="grammar-structure-back"></div>
+            <div id="grammar-structure-data-back" style="display: none;">{{Structure}}</div>
         </div>
         {{/Structure}}
 
@@ -59,7 +85,7 @@ export const grammarBackTemplate = `
             <script>
                 setTimeout(() => {
                     const dataEl = document.getElementById('analysis-data');
-                    if (dataEl) window.renderAnalysisTable('analysis-container', dataEl.innerText);
+                    if (dataEl) window.renderAnalysisTable('analysis-container', dataEl.innerHTML);
                 }, 100);
             </script>
         </div>
@@ -69,7 +95,8 @@ export const grammarBackTemplate = `
     {{#Observations}}
     <div class="grammar-block">
         <div class="section-title grammar-title-blue">Observações</div>
-        <div class="grammar-observations">{{Observations}}</div>
+        <div class="grammar-observations" id="grammar-observations-back"></div>
+        <div id="grammar-observations-data-back" style="display: none;">{{Observations}}</div>
     </div>
     {{/Observations}}
 
@@ -78,7 +105,8 @@ export const grammarBackTemplate = `
     {{#Hint}}
     <div class="grammar-block">
         <div class="section-title grammar-title-yellow">Dica</div>
-        <div class="grammar-hint">{{Hint}}</div>
+        <div class="grammar-hint" id="grammar-hint-back"></div>
+        <div id="grammar-hint-data-back" style="display: none;">{{Hint}}</div>
     </div>
     {{/Hint}}
 </div>
@@ -90,7 +118,8 @@ export const grammarTemplates = [
         Front: `
 <div class="card-wrapper front-card card-grammar">
     {{#Topic}}
-    <div class="grammar-topic">{{Topic}}</div>
+    <div class="grammar-topic" id="grammar-topic-front"></div>
+    <div id="grammar-topic-data-front" style="display: none;">{{Topic}}</div>
     {{/Topic}}
     <div class="main-title vocab-front text-primary" style="cursor: pointer;" onclick="this.classList.toggle('show-furigana')" id="grammar-sentence-front"></div>
     <div id="grammar-sentence-data-front" style="display: none;">{{Sentence}}</div>
@@ -100,7 +129,13 @@ export const grammarTemplates = [
             const sentenceEl = document.getElementById('grammar-sentence-front');
             const sentenceData = document.getElementById('grammar-sentence-data-front');
             if (sentenceEl && sentenceData) {
-                sentenceEl.innerHTML = window.parseFurigana(sentenceData.innerText, false);
+                sentenceEl.innerHTML = window.parseFurigana(sentenceData.innerHTML, false);
+            }
+
+            const topicEl = document.getElementById('grammar-topic-front');
+            const topicData = document.getElementById('grammar-topic-data-front');
+            if (topicEl && topicData) {
+                topicEl.innerHTML = window.parseFurigana(topicData.innerHTML, false);
             }
         }, 100);
     </script>

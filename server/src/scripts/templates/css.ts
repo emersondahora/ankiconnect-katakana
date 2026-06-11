@@ -96,6 +96,7 @@ export const CSS = `
     border-radius: 12px;
     border: 1px solid #334155;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);    
+    padding: 20px 0;
 }
 .vocab-image-container {
     flex: 1;
@@ -110,7 +111,6 @@ export const CSS = `
     cursor: default;
     user-select: text;
     margin-bottom: 10px;
-    white-space: nowrap;
 }
 .main-title.kanji-mode {
     cursor: pointer;
@@ -118,7 +118,6 @@ export const CSS = `
     font-size: clamp(60px, 10vw + 2rem, 150px);
 }
 .meaning-sub {
-    font-size: clamp(20px, 3vw + 0.5rem, 36px);
     color: #cbd5e1;
     margin-bottom: 20px;
     text-align: center;
@@ -208,11 +207,26 @@ export const CSS = `
     margin-right: 8px;
     vertical-align: middle;
 }
-.section-actions {
+.global-actions-menu {
+    position: fixed;
+    top: 15px;
+    right: 15px;
     display: flex;
     gap: 6px;
     align-items: center;
-    flex-wrap: wrap;
+    background: rgba(15, 23, 42, 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid #334155;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 1000;
+}
+.global-options {
+    display: flex;
+    gap: 6px;
+    align-items: center;
 }
 
 .item-list {
