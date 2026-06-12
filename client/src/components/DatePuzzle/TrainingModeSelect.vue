@@ -1,16 +1,16 @@
 <template>
-  <div class="flex gap-4 p-1 bg-slate-800 rounded-lg w-max mb-6">
+  <div class="flex w-full sm:w-max p-1 bg-slate-800 rounded-lg mb-6">
     <button 
       @click="updateMode('date')"
-      :class="['px-6 py-2 rounded-md font-medium transition-all flex items-center gap-2', modelValue === 'date' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-200']"
+      :class="['flex-1 sm:flex-none px-2 sm:px-6 py-2 rounded-md font-medium transition-all flex items-center justify-center gap-2 text-sm sm:text-base', modelValue === 'date' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-200']"
     >
-      <CalendarIcon class="w-4 h-4" /> Date Mode
+      <CalendarIcon class="w-4 h-4 shrink-0" /> <span class="truncate">Date Mode</span>
     </button>
     <button 
       @click="updateMode('audio')"
-      :class="['px-6 py-2 rounded-md font-medium transition-all flex items-center gap-2', modelValue === 'audio' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-200']"
+      :class="['flex-1 sm:flex-none px-2 sm:px-6 py-2 rounded-md font-medium transition-all flex items-center justify-center gap-2 text-sm sm:text-base', modelValue === 'audio' ? 'bg-slate-700 text-indigo-400 shadow-sm' : 'text-slate-400 hover:text-slate-200']"
     >
-      <Volume2Icon class="w-4 h-4" /> Audio Mode
+      <Volume2Icon class="w-4 h-4 shrink-0" /> <span class="truncate">Audio Mode</span>
     </button>
   </div>
 </template>
