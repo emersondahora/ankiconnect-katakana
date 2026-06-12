@@ -27,7 +27,9 @@
     "marked": "^18.0.5",
     "mime": "^4.1.0",
     "multer": "^2.1.1",
-    "sharp": "^0.35.1"
+    "sharp": "^0.35.1",
+    "sqlite": "^5.1.1",
+    "sqlite3": "^6.0.1"
   },
   "devDependencies": {
     "@types/cli-progress": "^3.11.5",

@@ -23,7 +23,7 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem('auth_token')
-      if (router.currentRoute.value.name !== 'Login') {
+      if (router.currentRoute.value.name !== 'Login' && router.currentRoute.value.name !== 'DatePuzzle') {
         router.push('/login')
       }
     }

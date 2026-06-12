@@ -4,6 +4,7 @@ import BulkImport from '../views/BulkImport.vue'
 import ManualImport from '../views/ManualImport.vue'
 import NotesBrowser from '../views/NotesBrowser.vue'
 import LoginView from '../views/LoginView.vue'
+import DatePuzzle from '../views/DatePuzzle.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -36,6 +37,11 @@ const router = createRouter({
       name: 'NotesBrowser',
       component: NotesBrowser,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/date-puzzle',
+      name: 'DatePuzzle',
+      component: DatePuzzle
     }
   ]
 })

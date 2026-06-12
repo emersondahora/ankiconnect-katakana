@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { RouterView, RouterLink, useRoute, useRouter } from 'vue-router'
-import { LayoutDashboard, UploadCloud, FilePlus, Library, ChevronLeft, ChevronRight, LogOut } from 'lucide-vue-next'
+import { LayoutDashboard, UploadCloud, FilePlus, Library, ChevronLeft, ChevronRight, LogOut, Calendar } from 'lucide-vue-next'
 import { onMounted, ref } from 'vue'
 import { isAnkiOnline, isBackendOnline, checkStatus } from './composables/useAnkiStatus'
 import { useCache } from './composables/useCache'
@@ -17,11 +17,11 @@ const logout = () => {
 }
 
 onMounted(() => {
-  if (route.name !== 'Login') {
+  if (route.meta?.requiresAuth) {
     checkStatus()
   }
   setInterval(() => {
-    if (route.name !== 'Login') {
+    if (route.meta?.requiresAuth) {
       checkStatus()
     }
   }, 5000)
@@ -103,6 +103,18 @@ onMounted(() => {
         >
           <Library class="w-5 h-5 shrink-0" />
           <span v-if="!isSidebarCollapsed">Deck Browser</span>
+        </RouterLink>
+
+        <RouterLink to="/date-puzzle"
+          class="flex items-center rounded-lg transition-colors px-3 py-3"
+          :class="[
+            route.path === '/date-puzzle' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:bg-slate-700 hover:text-white',
+            isSidebarCollapsed ? 'justify-center' : 'space-x-3'
+          ]"
+          :title="isSidebarCollapsed ? 'Date Puzzle' : ''"
+        >
+          <Calendar class="w-5 h-5 shrink-0" />
+          <span v-if="!isSidebarCollapsed">Date Puzzle</span>
         </RouterLink>
 
       </nav>
