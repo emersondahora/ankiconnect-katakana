@@ -5,3 +5,5 @@ uploads/
 audio/
 skipped.csv
 imported.csv
+server/backups/*.apkg
+server/backups/*.json
