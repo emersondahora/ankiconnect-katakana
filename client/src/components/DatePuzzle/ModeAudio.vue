@@ -5,12 +5,21 @@
       <p class="text-sm text-slate-400">Listen to the audio and select the correct date.</p>
     </div>
 
-    <button 
-      @click="puzzleState.playAudioSequence()"
-      class="mb-8 px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-medium shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-3 hover:scale-105"
-    >
-      <Volume2Icon class="w-6 h-6" /> Play Audio
-    </button>
+    <div class="flex flex-col sm:flex-row items-center gap-4 mb-8">
+      <button 
+        @click="puzzleState.playAudioSequence()"
+        class="px-8 py-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full font-medium shadow-lg shadow-emerald-600/30 transition-all flex items-center gap-3 hover:scale-105"
+      >
+        <Volume2Icon class="w-6 h-6" /> Play Audio
+      </button>
+
+      <button 
+        @click="generateRandomDate"
+        class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors text-sm font-medium flex items-center gap-2"
+      >
+        <DicesIcon class="w-4 h-4" /> Randomize Audio
+      </button>
+    </div>
 
     <div class="w-full bg-slate-800/80 p-6 rounded-xl border border-slate-700">
       <h3 class="text-center text-sm font-medium text-slate-300 mb-4">Your Answer</h3>
@@ -61,7 +70,7 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue';
-import { Volume2Icon, CheckCircleIcon, XCircleIcon, ArrowRightIcon } from 'lucide-vue-next';
+import { Volume2Icon, CheckCircleIcon, XCircleIcon, ArrowRightIcon, DicesIcon } from 'lucide-vue-next';
 import DateSelector from './DateSelector.vue';
 import type { useDatePuzzle } from '../../composables/useDatePuzzle';
 
