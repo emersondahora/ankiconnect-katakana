@@ -1,5 +1,6 @@
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { apiClient } from '../api/client';
+import { useCache } from './useCache';
 
 export type GameMode = 'date' | 'audio';
 
@@ -64,6 +65,7 @@ const getDayHiragana = (day: number): string => {
 export function useDatePuzzle() {
     const mode = ref<GameMode>('date');
     const history = ref<PuzzleResult[]>([]);
+    const audioSpeed = useCache('datePuzzleAudioSpeed', 1.0);
 
     const targetYear = ref<number>(1980);
     const targetMonth = ref<number>(1);
@@ -83,6 +85,7 @@ export function useDatePuzzle() {
     const playAudioSequence = async (y = targetYear.value, m = targetMonth.value, d = targetDay.value) => {
         const play = (url: string) => new Promise<void>((resolve, reject) => {
             const audio = new Audio(url);
+            audio.playbackRate = audioSpeed.value;
             audio.onended = () => resolve();
             audio.onerror = () => reject();
             audio.play().catch(reject);
@@ -137,6 +140,7 @@ export function useDatePuzzle() {
     return {
         mode,
         history,
+        audioSpeed,
         targetYear,
         targetMonth,
         targetDay,
