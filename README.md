@@ -7,8 +7,10 @@ O sistema utiliza a API do AnkiConnect para se comunicar com o Anki localmente e
 ## 🚀 Funcionalidades
 
 - **Integração com Anki:** Comunicação direta com o seu Anki local via AnkiConnect.
+- **Segurança (Google OAuth):** Sistema de login integrado ao Google (Autenticação JWT) com restrição de e-mail permitido, garantindo acesso seguro ao painel de administração da sua aplicação no servidor remoto.
 - **Importação em Massa (CLI ou Web):** Lê listas de palavras a partir de arquivos CSV e cria os flashcards de forma automatizada, controlando o progresso e registrando as palavras importadas, ignoradas (já existentes) ou que falharam.
 - **Importação Manual:** Interface web que permite criar cards individualmente, revisando o conteúdo gerado antes de enviar ao Anki.
+- **Date Puzzle (Minigame de Treinamento):** Nova rota pública integrada para treinar leituras e áudio de datas em japonês com modos variados e sistema de histórico.
 - **Enriquecimento de Cards:**
   - **Geração de Áudio:** Utiliza o Google TTS para gerar a pronúncia da palavra.
   - **Processamento de Imagens:** Suporte a busca de imagens (Pexels API) ou upload manual, processando-as com `fluent-ffmpeg`.
@@ -72,7 +74,9 @@ Para rodar este projeto, você precisará ter instalado em sua máquina:
 ## ⚙️ Configuração do Ambiente
 
 1. Clone o repositório ou acesse a pasta do projeto.
-2. Configure as variáveis de ambiente do **Servidor**:
+2. Configure as variáveis de ambiente:
+
+### Configuração do Servidor
 
 Na pasta `server`, crie uma cópia do arquivo `.env.example` com o nome `.env`:
 
@@ -81,7 +85,7 @@ cd server
 cp .env.example .env
 ```
 
-Edite o arquivo `.env` com as suas chaves e configurações do Anki:
+Edite o arquivo `.env` com as suas chaves. **Atenção:** As configurações do Google Client ID são OBRIGATÓRIAS para o funcionamento da plataforma.
 
 ```env
 ANKI_URL=http://localhost:8765
@@ -90,17 +94,42 @@ ANKI_MODEL=JP::Katakana
 PEXELS_API_KEY=sua_chave_do_pexels_aqui
 GEMINI_API_KEY=sua_chave_do_gemini_aqui
 YAHOO_CLIENT_ID=sua_chave_do_yahoo_aqui
+
+# 🔐 Configuração de Segurança e Login (Google)
+# Obrigatório criar no Google Cloud Console um Client ID (Web Application)
+GOOGLE_CLIENT_ID=seu_client_id_google_aqui.apps.googleusercontent.com
+ALLOWED_EMAIL=seu_email_permitido@gmail.com
+JWT_SECRET=uma_chave_secreta_super_forte_aqui
 ```
+
+### Configuração do Cliente Web
+
+Na pasta `client`, você também precisa criar o arquivo `.env` para a interface saber se comunicar com a autenticação do Google:
+
+```bash
+cd ../client
+cp .env.example .env
+```
+
+Edite o arquivo `.env` preenchendo a mesma credencial:
+
+```env
+VITE_GOOGLE_CLIENT_ID=seu_client_id_google_aqui.apps.googleusercontent.com
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+> [!IMPORTANT]
+> **Autenticação:** O sistema foi projetado para rodar exposto na nuvem de forma segura. Apenas o `ALLOWED_EMAIL` configurado conseguirá fazer login. Sem as variáveis `GOOGLE_CLIENT_ID` (em ambas as pastas) a aplicação vai bloquear o acesso às áreas privadas do site e redirecionar para a página de Login. As únicas áreas públicas são as rotas de treino (Date Puzzle).
 
 3. Instale as dependências:
 
 Para o Servidor:
 ```bash
-cd server
+cd ../server
 npm install
 ```
 
-Para o Cliente (Interface Web):
+Para o Cliente:
 ```bash
 cd ../client
 npm install
