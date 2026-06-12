@@ -3,6 +3,7 @@ dist/
 .env
 uploads/
 audio/
+!client/public/audio/
 skipped.csv
 imported.csv
 server/backups/*.apkg
