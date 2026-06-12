@@ -2,6 +2,7 @@ import { AnkiService } from '../AnkiService.js';
 import { AudioService } from '../AudioService.js';
 import { FuriganaService } from '../FuriganaService.js';
 import path from 'path';
+import { MediaNamingService } from '../MediaNamingService.js';
 
 export interface ParsedItem {
     text: string;
@@ -18,7 +19,7 @@ export abstract class BaseCardService {
      * Parses a string like "Word1|Meaning1||Word2|Meaning2" into an array of objects
      * And automatically generates furigana and audio for each text
      */
-    protected async processListField(rawString: string, noteId: string, fieldName: string): Promise<ParsedItem[]> {
+    protected async processListField(rawString: string, noteId: string, fieldName: string, baseTerm: string): Promise<ParsedItem[]> {
         if (!rawString) return [];
         
         const items = rawString.split('||').map(s => s.trim()).filter(Boolean);
@@ -35,7 +36,7 @@ export abstract class BaseCardService {
             const furiganaText = await FuriganaService.generateFurigana(originalText);
 
             // Generate Audio
-            const audioFilename = `${noteId}_${fieldName}_${i}.mp3`;
+            const audioFilename = MediaNamingService.generateFilename(this.getModelName(), baseTerm, fieldName, 'mp3', i);
             const audioPath = await AudioService.generateAudio(originalText, audioFilename);
             await AnkiService.storeMediaFile(audioFilename, audioPath);
 

@@ -7,6 +7,8 @@ import { getSearchTerms } from '../../utils/helpers.js';
 import { CardCreationError } from '../../errors/CustomErrors.js';
 import { progressEmitter, decisionEmitter } from '../../controllers/EventController.js';
 import { config } from '../../config/env.js';
+import { ImageCompressionService } from '../ImageCompressionService.js';
+import { MediaNamingService } from '../MediaNamingService.js';
 
 export class KatakanaCardService extends BaseCardService {
     getModelName(): string {
@@ -32,7 +34,7 @@ export class KatakanaCardService extends BaseCardService {
             };
 
             // Audio for word
-            const wordFile = `${word}.mp3`;
+            const wordFile = MediaNamingService.generateFilename(this.getModelName(), word, 'audio_word', 'mp3');
             const wordPath = await AudioService.generateAudio(word, wordFile);
             await AnkiService.storeMediaFile(wordFile, wordPath);
             fields.AudioWord = `[sound:${wordFile}]`;
@@ -40,11 +42,18 @@ export class KatakanaCardService extends BaseCardService {
             // Image Decision
             let imageHtml = '';
             
+            const processAndStoreImage = async (tempLocalPath: string) => {
+                const finalFilename = MediaNamingService.generateFilename(this.getModelName(), word, 'illustration', 'webp');
+                const finalPath = path.join(process.cwd(), 'uploads', finalFilename);
+                await ImageCompressionService.compress(tempLocalPath, finalPath);
+                await AnkiService.storeMediaFile(finalFilename, finalPath);
+                if (fs.existsSync(finalPath)) fs.unlinkSync(finalPath);
+                if (fs.existsSync(tempLocalPath)) fs.unlinkSync(tempLocalPath);
+                return `<img src="${finalFilename}">`;
+            };
+
             if (data._uploadedFilePath && data._uploadedFileName) {
-                const filename = `${noteId}_${data._uploadedFileName}`;
-                await AnkiService.storeMediaFile(filename, data._uploadedFilePath);
-                fs.unlinkSync(data._uploadedFilePath);
-                imageHtml = `<img src="${filename}">`;
+                imageHtml = await processAndStoreImage(data._uploadedFilePath);
             } else if (!data._isManualImport) {
                 const queries = imageTerms.length > 0 && imageTerms[0] !== '' ? imageTerms : [meaning];
                 const decision: any = await new Promise((resolve) => {
@@ -64,11 +73,7 @@ export class KatakanaCardService extends BaseCardService {
                 if (decision.type === 'URL' && decision.url) {
                     imageHtml = `<img src="${decision.url}">`;
                 } else if (decision.type === 'UPLOAD' && decision.file) {
-                    const uploadPath = decision.file.path;
-                    const fileName = `${noteId}_${decision.file.originalname}`;
-                    await AnkiService.storeMediaFile(fileName, uploadPath);
-                    fs.unlinkSync(uploadPath);
-                    imageHtml = `<img src="${fileName}">`;
+                    imageHtml = await processAndStoreImage(decision.file.path);
                 }
             }
             fields.Image = imageHtml;
@@ -78,9 +83,8 @@ export class KatakanaCardService extends BaseCardService {
                 const s = sentences[i];
                 if (!s) continue;
 
-                const base = `${word}_s${i}`;
-                const normalFile = `${base}.mp3`;
-                const fastFile = `${base}_fast.mp3`;
+                const normalFile = MediaNamingService.generateFilename(this.getModelName(), word, 'sentence_normal', 'mp3', i);
+                const fastFile = MediaNamingService.generateFilename(this.getModelName(), word, 'sentence_fast', 'mp3', i);
 
                 const normalPath = await AudioService.generateAudio(s, normalFile);
                 const fastPath = path.join(process.cwd(), 'audio', fastFile);

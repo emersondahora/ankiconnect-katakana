@@ -21,8 +21,8 @@ export class KanjiCardService extends BaseCardService {
             if (!kanji) throw new Error("Kanji field is missing");
 
             // Process Words and Sentences
-            const wordsList = await this.processListField(wordsRaw, noteId, 'words');
-            const sentencesList = await this.processListField(sentencesRaw, noteId, 'sentences');
+            const wordsList = await this.processListField(wordsRaw, noteId, 'words', kanji);
+            const sentencesList = await this.processListField(sentencesRaw, noteId, 'sentences', kanji);
 
             // Fetch Kanji SVG from KanjiVG
             let strokeSvg = '';
